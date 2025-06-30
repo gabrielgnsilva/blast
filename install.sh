@@ -408,7 +408,7 @@ function _checkPrograms() {
   foundDependencies=()
   local i
   for i in "${@}"; do
-    if ! command -v "${i}" > /dev/null 2>&1 && ! pacman -Qq "${i}" > /dev/null 2>&1; then
+    if ! command -v "${i}" > /dev/null 2>&1 && ! pacman -Qq "${i}" >&3; then
       missingDependencies+=("${i}")
       continue
     fi
@@ -581,6 +581,7 @@ function postInstallationLoop() {
   ufw enable >&3                        # Enable firewall
 }
 function installationloop() {
+  post_user_setup=()
   local progsfile="${scriptDir}/data/packages/csv"
 
   local root=/
@@ -601,11 +602,21 @@ function installationloop() {
     echo "${purpose}" | grep -q "^\".*\"$" \
       && purpose="$(echo "${purpose}" | sed -E "s/(^\"|\"$)//g")"
     case "${tag}" in
-      "G") gitcloneinstall "${package}" "${purpose}" ;;
-      "N") nerdfontinstall "${package}" "${purpose}" ;;
+      "G" | "N")
+        post_user_setup+=("${tag},${purpose},${package}")
+        ;;
       *) maininstall "${package}" "${purpose}" ;;
     esac
   done < "${root}"/tmp/progs.csv
+}
+function installUserSpecificPackages() {
+  for line in "${post_user_setup[@]}"; do
+    IFS=, read -r tag purpose package <<< "$line"
+    case "${tag}" in
+      "G") gitcloneinstall "${package}" "${purpose}" ;;
+      "N") nerdfontinstall "${package}" "${purpose}" ;;
+    esac
+  done
 }
 
 function obtainTimezone() {
@@ -680,7 +691,7 @@ function configHostname() {
     sleep $((RANDOM % 2 + 1))
     return 0
   else
-    pacman --sync networkmanager dhcpcd openssh wpa_supplicant --noconfirm >&3
+    pacman --sync --needed networkmanager dhcpcd openssh wpa_supplicant --noconfirm >&3
     systemctl enable NetworkManager.service >&3
     systemctl enable dhcpcd.service >&3
   fi
@@ -755,9 +766,9 @@ function installMicrocode() {
   fi
 
   if [[ "${cpuVendor}" == "intel" ]]; then
-    pacman --sync intel-ucode --noconfirm >&3
+    pacman --sync --needed intel-ucode --noconfirm >&3
   elif [[ "${cpuVendor}" == "amd" ]]; then
-    pacman --sync amd-ucode --noconfirm >&3
+    pacman --sync --needed amd-ucode --noconfirm >&3
   fi
 }
 function configBootloader() {
@@ -810,7 +821,7 @@ function configBootloader() {
       } | tee "${root}"/boot/loader/entries/arch-fallback.conf >&3
     fi
 
-    [[ "${debug}" != 1 ]] && mkinitcpio -p linux
+    [[ "${debug}" != 1 ]] && mkinitcpio -p linux >&3
 
     if [[ "${debug}" == 1 ]]; then
       echo 'systemctl enable systemd-boot-update.service' >&3
@@ -830,7 +841,7 @@ function configBootloader() {
       --bootloader-id=GRUB --recheck' >&3
       echo 'grub-mkconfig -o /boot/grub/grub.cfg' >&3
     else
-      pacman --sync grub efibootmgr --noconfirm >&3
+      pacman --sync --needed --noconfirm grub efibootmgr >&3
       grub-install --target=x86_64-efi --efi-directory=/boot \
         --bootloader-id=GRUB --recheck >&3
       sed --expression 's/GRUB_TIMEOUT=5/GRUB_TIMEOUT=0/g' \
@@ -1044,7 +1055,7 @@ function configUser() {
     --groups wheel,i2c,libvirt \
     --shell /bin/zsh \
     "${username}" >&3 \
-    || usermod -a -g wheel -c "${name}" && mkdir -p /home/"${username}" && chown "${username}":wheel /home/"${username}"
+    || usermod --append --groups wheel,i2c,libvirt --comment "${name}" && mkdir -p /home/"${username}" && chown "${username}":wheel /home/"${username}"
   echo "${username}:${password1}" | chpasswd
   unset password1 password2
 }
@@ -1115,8 +1126,9 @@ function full_setup() {
   configFiles
   configDefaultHomeDirectories
   configXDGBaseDirectory
-  configUser
   installationloop
+  configUser
+  installUserSpecificPackages
   makeUserJS
 
   # End installation
