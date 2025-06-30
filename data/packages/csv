@@ -1,0 +1,62 @@
+TYPE, PURPOSE,                                                              PACKAGE(s)
+P,    "Provide manual page indexing and lookup",                            man-db
+P,    "Provide system manual documentation",                                man-pages
+P,    "Provide GNU software documentation",                                 texinfo
+P,    "Provide interactive terminal dialogs",                               dialog
+P,    "Enable FAT filesystem management",                                   dosfstools
+P,    "Enable I2C device communication",                                    i2c-tools
+P,    "Enable hardware sensor monitoring",                                  lm_sensors
+P,    "Enable access to MS-DOS FAT filesystems",                            mtools
+P,    "Enable ZIP/7z archive manipulation",                                 zip unzip p7zip
+P,    "Enable uncomplicated firewall management",                           ufw
+P,    "Enable data transfer via multiple protocols",                        curl wget
+P,    "Manage standard user directories",                                   xdg-user-dirs
+P,    "Provide desktop environment integration tools",                      xdg-utils
+P,    "Enable X resources database management",                             xorg-xrdb
+P,    "Enable font discovery and configuration",                            fontconfig lib32-fontconfig
+P,    "Enable emoji font rendering",                                        noto-fonts-emoji
+P,    "Enable Japanese font support",                                       otf-ipafont
+P,    "AMD GPU Drivers",                                                    mesa lib32-mesa xf86-video-amdgpu vulkan-radeon lib32-vulkan-radeon libva-mesa-driver lib32-libva-mesa-driver mesa-vdpau lib32-mesa-vdpau
+P,    "Enable multimedia framework (PipeWire + Audio Backends)",            pipewire lib32-pipewire pipewire-audio pipewire-pulse pipewire-alsa pipewire-jack lib32-pipewire-jack
+P,    "Provide session and policy manager for PipeWire",                    wireplumber
+P,    "Graphical PipeWire patchbay/connection manager",                     qpwgraph
+P,    "Command-line audio mixer (PulseAudio compatible)",                   pamixer
+P,    "Terminal-based PulseAudio mixer",                                    pulsemixer
+P,    "LADSPA plugin support for audio effects",                            ladspa
+P,    "Real-time noise suppression filter for voice",                       noise-suppression-for-voice
+P,    "Enable audio editing",                                               audacity
+P,    "Enable image editing",                                               gimp
+P,    "Provide office suite functionality",                                 libreoffice
+P,    "Provide advanced text editing",                                      fd fzf ripgrep tree-sitter neovim
+P,    "Provide lightweight document viewing",                               zathura zathura-pdf-poppler
+P,    "Enable lightweight image viewing",                                   nsxiv
+P,    "Enable log file analysis",                                           lnav
+P,    "Enable media playback",                                              vlc
+P,    "Enable automatic command execution on file change",                  entr
+P,    "Provide interactive process monitoring",                             htop
+P,    "Enable terminal-based calendar and task management",                 calcurse
+P,    "Enable terminal multiplexing",                                       tmux
+P,    "Enable ZSH",                                                         zsh zsh-syntax-highlighting zsh-completions zsh-autosuggestions
+P,    "Enable code snippet image generation",                               silicon
+P,    "Enable Peer-to-Peer downloading",                                    qbittorrent
+P,    "Enable screen recording and streaming",                              obs-studio
+P,    "Provide web browsing capability",                                    firefox geckodriver
+P,    "Enable GUI-based virtualization management",                         qemu-desktop qemu libvirt dnsmasq openbsd-netcat dmidecode iptables-nft edk2-ovmf swtpm bridge-utils virt-manager
+P,    "Provide C and C++ compilation tools",                                gcc clang
+P,    "Enable build automation",                                            make
+P,    "Provide Go programming environment",                                 go
+P,    "Enable JSON parsing and manipulation",                               jq
+P,    "Enable Node.js package management",                                  npm
+P,    "Provide Julia programming environment",                              julia
+P,    "Enable DVI to SVG conversion",                                       dvisvgm ghostscript ijs woff2 texlive-latex texlive-basic texlive-langother texlive-langportuguese texlive-langenglish texlive-latexrecommended texlive-pictures texlive-latexextra texlive-bibtexextra biber
+P,    "Provide PHP runtime environment",                                    php composer
+P,    "Provide Python 3 programming environment",                           python3 python-pip
+P,    "Provide Rust programming environment",                               rustup cargo
+P,    "Provide Ruby programming environment ",                              ruby rubygems
+P,    "Enable shell script linting",                                        shellcheck
+P,    "Hyprland-based Wayland environment with utilities and enhancements", hyprland hyprpaper qt5-wayland qt6-wayland xdg-desktop-portal xdg-desktop-portal-gnome xdg-desktop-portal-hyprland qt5ct qt6ct polkit polkit-gnome gnome-keyring libsecret libgnome-keyring seahorse nm-connection-editor network-manager-applet dunst rofi rofi-emoji wl-clipboard cliphist wtype udisks2 udiskie file rg resvg yazi slurp grim swappy engrampa thunar gvfs thunar-archive-plugin thunar-media-tags-plugin ffmpegthumbnailer tumbler libgsf papirus-icon-theme capitaine-cursors slock
+N,    "Provide Hack NF",                                                    Hack
+N,    "Provide FiraCode NF",                                                FiraCode
+N,    "Provide CascadiaCode NF",                                            CascadiaCode
+N,    "Provide JetBrainsMono NF",                                           JetBrainsMono
+G,    "Provide Tmux Plugin Manager",                                        tmux-plugins/tpm .config/tmux/plugins/tpm
