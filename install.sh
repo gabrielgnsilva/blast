@@ -505,6 +505,10 @@ function refreshKeys() {
     *) ;;
   esac
 }
+function removePackage() {
+  IFS=' ' read -r -a pkg_array <<< "${1}"
+  pacman --remove -dd "${pkg_array[@]}" 1>&3
+}
 function installPackage() {
   if [[ "${debug}" == 1 ]]; then
     local pkg="${1}"
@@ -517,7 +521,7 @@ function installPackage() {
     return 0
   fi
   IFS=' ' read -r -a pkg_array <<< "${1}"
-  pacman --noconfirm --disable-download-timeout --needed --sync "${pkg_array[@]}" >&3
+  pacman --noconfirm --disable-download-timeout --needed --sync "${pkg_array[@]}" 1>&3
 }
 function maininstall() {
   local max_len=30
@@ -528,6 +532,9 @@ function maininstall() {
   {
     echo $((n * 100 / total))
   } | whiptail --title "${debug:+[DEBUG] }Installation in progress..." --gauge "Installing \"${pkg}\" (${n} of ${total}).\n\n${2}" 10 80 0
+  if [[ "${3}" != '' ]]; then
+    removePackage "${3}"
+  fi
   installPackage "${1}"
 }
 function gitcloneinstall() {
@@ -595,11 +602,12 @@ function installationloop() {
     || curl -Ls "${progsfile}" | sed '/^#/d' > "${root}"/tmp/progs.csv
   total=$(wc -l < "${root}"/tmp/progs.csv)
   n=-1
-  while IFS=, read -r tag purpose package; do
+  while IFS=, read -r tag purpose conflict package; do
     n=$((n + 1))
     [[ n -eq 0 ]] && continue
     tag=$(echo "${tag}" | xargs)
     purpose=$(echo "${purpose}" | xargs)
+    conflict=$(echo "${conflict}" | xargs)
     package=$(echo "${package}" | xargs)
     echo "${purpose}" | grep -q "^\".*\"$" \
       && purpose="$(echo "${purpose}" | sed -E "s/(^\"|\"$)//g")"
@@ -607,7 +615,7 @@ function installationloop() {
       "G" | "N")
         post_user_setup+=("${tag},${purpose},${package}")
         ;;
-      *) maininstall "${package}" "${purpose}" ;;
+      *) maininstall "${package}" "${purpose}" "${conflict}" ;;
     esac
   done < "${root}"/tmp/progs.csv
 }
