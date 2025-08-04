@@ -543,6 +543,9 @@ function gitcloneinstall() {
   {
     echo $((n * 100 / total))
   } | whiptail --title "${debug:+[DEBUG] }Installation in progress..." --gauge "Installing \"${url}\" (${n} of ${total}).\n\n${2}" 10 80 0
+  if [[ -d "/home/${username:?}/${toPath:?}" ]]; then
+    rm -rf "/home/${username:?}/${toPath:?}"
+  fi
   su - "${username}" -c "git clone https://github.com/${url}.git /home/${username}/${toPath}" >&3
 
 }
