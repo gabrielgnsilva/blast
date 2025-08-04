@@ -516,8 +516,8 @@ function installPackage() {
     sleep $((RANDOM % 2 + 1))
     return 0
   fi
-
-  pacman --noconfirm --disable-download-timeout --needed --sync "${1}" >&3
+  IFS=' ' read -r -a pkg_array <<< "${1}"
+  pacman --noconfirm --disable-download-timeout --needed --sync "${pkg_array[@]}" >&3
 }
 function maininstall() {
   local max_len=30
@@ -536,7 +536,8 @@ function gitcloneinstall() {
   {
     echo $((n * 100 / total))
   } | whiptail --title "${debug:+[DEBUG] }Installation in progress..." --gauge "Installing \"${url}\" (${n} of ${total}).\n\n${2}" 10 80 0
-  git clone https://github.com/"${url}".git /home/"${username}"/"${toPath}" >&3
+  su - "${username}" -c "git clone https://github.com/${url}.git /home/${username}/${toPath}" >&3
+
 }
 function nerdfontinstall() {
   local font="${1}"
@@ -545,7 +546,7 @@ function nerdfontinstall() {
     echo $((n * 100 / total))
   } | whiptail --title "${debug:+[DEBUG] }Installation in progress..." --gauge "Installing \"${font}\" (${n} of ${total}).\n\n${2}" 10 80 0
   fontsDir="$([[ -z "${XDG_DATA_HOME-}" ]] && printf %s "/home/${username}/.local/share/fonts" || printf %s "${XDG_DATA_HOME}/fonts")"
-  [[ -d "${fontsDir:?}" ]] || mkdir --parents --verbose "${fontsDir:?}" >&3
+  [[ -d "${fontsDir:?}" ]] || mkdir --parents --verbose "${fontsDir:?}" >&3 && chown -R "${username}:${username}" "${fontsDir:?}" >&3
   if [[ -d "${fontsDir:?}"/"${font:?}" ]]; then
     rm --force --recursive --verbose "${fontsDir:?}"/"${font:?}" >&3
   fi
@@ -557,6 +558,7 @@ function nerdfontinstall() {
   curl --location https://github.com/ryanoasis/nerd-fonts/releases/download/"${version}"/"${font:?}".zip --output "${scriptTempDir:?}"/"${font:?}".zip >&3
   mkdir --verbose --parents "${fontsDir:?}"/"${font:?}" >&3
   unzip -o "${scriptTempDir:?}"/"${font:?}".zip -d "${fontsDir:?}"/"${font:?}"/ >&3
+  chown -R "${username}:${username}" "${fontsDir:?}"/"${font:?}"/
   fc-cache --really-force >&3
 }
 function aurinstall() {
@@ -611,10 +613,11 @@ function installationloop() {
 }
 function installUserSpecificPackages() {
   for line in "${post_user_setup[@]}"; do
-    IFS=, read -r tag purpose package <<< "$line"
+    IFS=, read -r tag purpose package <<< "${line}"
     case "${tag}" in
       "G") gitcloneinstall "${package}" "${purpose}" ;;
       "N") nerdfontinstall "${package}" "${purpose}" ;;
+      *) break ;;
     esac
   done
 }
@@ -1062,13 +1065,12 @@ function configUser() {
 function makeUserJS() {
   whiptail --title "${debug:+[DEBUG] }Installation in progress..." --infobox "Setting browser privacy settings and add-ons..." 10 80
 
-  # TODO: Debugger
   if [[ "${debug}" == 1 ]]; then
     sleep $((RANDOM % 2 + 1))
     return 0
   fi
 
-  local upstreamUserJSURL='https://raw.githubusercontent.com/arkenfox/user.js/refs/heads/master/user.js'
+  local upstreamUserJSURL='https://raw.githubusercontent.com/yokoffing/Betterfox/refs/heads/main/user.js'
   local browserDir="/home/${username}/.mozilla/firefox"
   local profilesINI="${browserDir}/profiles.ini"
 
@@ -1095,8 +1097,9 @@ function cloneConfigFiles() {
     sleep $((RANDOM % 2 + 1))
     return 0
   fi
+  [[ -d /home/"${username}"/.local/share/BLAST/dotfiles ]] && rm -rf /home/"${username}"/.local/share/BLAST/dotfiles
   git clone --bare https://github.com/gabrielgnsilva/dotfiles -b dev /home/"${username}"/.local/share/BLAST/dotfiles
-  git --git-dir=/home/"${username}"/.local/share/BLAST/dotfiles --work-tree=/home/"${username}" checkout
+  git --git-dir=/home/"${username}"/.local/share/BLAST/dotfiles --work-tree=/home/"${username}" checkout -f
   sed --expression "s/CURRENTUSERNAME/${username}/g" \
     --in-place /home/"${username}"/.config/gtk-3.0/bookmarks
 }
@@ -1129,6 +1132,7 @@ function full_setup() {
   installationloop
   configUser
   installUserSpecificPackages
+  cloneConfigFiles
   makeUserJS
 
   # End installation
