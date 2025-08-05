@@ -886,7 +886,7 @@ function configLocale() {
   [[ "${debug}" != 1 ]] && locale-gen >&3
   {
     printf "LANG=en_US.UTF-8\n"
-    printf "LANGUAGE=en_US:en\n"
+    printf "LANGUAGE=en_US:en:C\n"
     printf "LC_ADDRESS=en_US\n"
     printf "LC_COLLATE=en_US\n"
     printf "LC_CTYPE=en_US\n"
@@ -900,6 +900,7 @@ function configLocale() {
     printf "LC_SOURCED=en_US\n"
     printf "LC_TELEPHONE=en_US\n"
     printf "LC_TIME=en_US\n"
+    printf "LC_ALL="
   } | tee "${root}"/etc/locale.conf >&3
 }
 function configKeyboardLayout() {
