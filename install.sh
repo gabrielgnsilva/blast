@@ -507,7 +507,7 @@ function refreshKeys() {
 }
 function removePackage() {
   IFS=' ' read -r -a pkg_array <<< "${1}"
-  pacman --remove -dd "${pkg_array[@]}" 1>&3
+  pacman --remove -dd "${pkg_array[@]}" 1>&3 || echo "Conflicting package(s) not installed"
 }
 function installPackage() {
   if [[ "${debug}" == 1 ]]; then
