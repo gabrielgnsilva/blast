@@ -1097,9 +1097,10 @@ function makeUserJS() {
     local upstreamUserJS="${pdir}/custom_user.js"
     local userjs="${pdir}/user.js"
     [[ ! -f "${upstreamUserJS}" ]] && curl -sL "${upstreamUserJSURL}" > "${upstreamUserJS}"
+    [[ -f "${upstreamUserJS}" ]] && rm "${userjs}"
     cat "${upstreamUserJS}" > "${userjs}"
     chown "${username}:wheel" "${upstreamUserJS}" "${userjs}"
-    pkill -u "${username}" firefox
+    pkill -u "${username}" firefox || echo "Firefox not running..."
   fi
 }
 
