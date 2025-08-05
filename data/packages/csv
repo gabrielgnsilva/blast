@@ -30,6 +30,7 @@ P,    "Enable image editing",                                               ,   
 P,    "Provides a terminal emulator",                                       ,            wezterm
 P,    "Provide office suite functionality",                                 ,            libreoffice
 P,    "Provide advanced text editing",                                      ,            fd fzf ripgrep tree-sitter neovim
+P,    "Provide advanced directory navigation",                              ,            zoxide
 P,    "Provide lightweight document viewing",                               ,            zathura zathura-pdf-poppler
 P,    "Enable lightweight image viewing",                                   ,            nsxiv
 P,    "Enable log file analysis",                                           ,            lnav
