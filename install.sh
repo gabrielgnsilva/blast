@@ -3,8 +3,8 @@
 #=======================================================================
 # HEADER
 #=======================================================================
-#% NAME
-#%      Script Name - A brief description of your script.
+#% BLAST
+#%      BLAST - Briel’s Linux Auto-Setup Tool.
 #%
 #=======================================================================
 #% SYNOPSIS
@@ -12,8 +12,9 @@
 #+
 #=======================================================================
 #% DESCRIPTION
-#+      A detailed description of your script goes here.
-#+      You can use multiple lines to provide more information.
+#+      BLAST (Briel’s Linux Auto-Setup Tool) is a post-install script
+#+      that configures your Arch system exactly like mine: fast, clean,
+#+      and fully automated.
 #+
 #=======================================================================
 #+ OPTIONS
@@ -30,9 +31,10 @@
 #+ EXAMPLES
 #%      Example usages of ${scriptName}.
 #+
-#+      $ ${scriptName} -l script.log -o
-#%          This example shows how to use the script with the log file
-#%          set to "script.log", and -o option, that does nothing.
+#+      $ ${scriptName} -s full -p my_package_list.json
+#%          This example shows how to use the script with the pacakge
+#%          file set to "my_package_list.json", and -s option as full,
+#%          that runs a complete setup for Arch Linux.
 #+
 #=======================================================================
 #/ IMPLEMENTATION
@@ -453,48 +455,37 @@ function checkDependencies() {
 
 # region: Script Functions
 function cancelInstallation() {
-  whiptail --title "${debug:+[DEBUG] }Canceled" --msgbox "The installation process was successfully canceled." 10 60
+  whiptail --title "Canceled" --msgbox "The installation process was successfully canceled." 10 60
   clear
   exit 0
 }
 function abortInstallation() {
-  whiptail --title "${debug:+[DEBUG] }Error" --msgbox "${1}" 10 60
+  whiptail --title "Error" --msgbox "${1}" 10 60
   clear
   exit 1
 }
 function welcome() {
-  whiptail --title "${debug:+[DEBUG] }Welcome!" \
+  whiptail --title "Welcome!" \
     --msgbox "This script will automatically install a fully-featured Linux desktop, which I use as my main machine.\\n\\n-Gabriel" 10 60 || cancelInstallation
-  whiptail --title "${debug:+[DEBUG] }Important Note!" \
+  whiptail --title "Important Note!" \
     --yes-button "Go!" \
     --no-button "Return..." \
     --yesno "Please ensure your system has updated pacman updates and refreshed Arch keyrings.\\n\\nFailure to do so might result in installation errors for certain programs." 8 70 || cancelInstallation
 }
 function confirmInstall() {
-  whiptail --title "${debug:+[DEBUG] }Let's get this party started!" \
+  whiptail --title "Let's get this party started!" \
     --yes-button "Let's go!" \
     --no-button "No, nevermind!" \
     --yesno "The rest of the installation will now be totally automated, so you can sit back and relax.\\n\\nIt will take some time, but when done, you can relax even more with your complete system.\\n\\nNow just press <Let's go!> and the system will begin installation!" 13 60 || cancelInstallation
 }
 function finalize() {
-  if [[ "${debug}" == 1 ]]; then
-    whiptail --title "${debug:+[DEBUG] }All done!" \
-      --msgbox "Debugger enabled, check the log file and the debug folder." 13 80
-  else
-    whiptail --title "${debug:+[DEBUG] }All done!" \
-      --msgbox "Congrats! Provided there were no hidden errors, the script completed successfully and all the programs and configuration files should be in place.\\n\\nTo run the new graphical environment, log out and log back in as your new user, then run the command \"startx\" to start the graphical environment (it will start automatically in tty1).\\n\\n.t Luke" 13 80
-  fi
+  whiptail --title "All done!" \
+    --msgbox "Congrats! Provided there were no hidden errors, the script completed successfully and all the programs and configuration files should be in place.\\n\\nTo run the new graphical environment, log out and log back in as your new user, then run the command \"startx\" to start the graphical environment (it will start automatically in tty1).\\n\\n.t Luke" 13 80
   clear
   exit 0
 }
 
 function refreshKeys() {
-  if [[ "${debug}" == 1 ]]; then
-    whiptail --title "${debug:+[DEBUG] }Installation in progress..." --infobox "Automatically refreshing Arch Keyring..." 10 80
-    sleep $((RANDOM % 2 + 1))
-    return 0
-  fi
-
   case "$(readlink -f /sbin/init)" in
     *systemd*)
       whiptail --infobox "Automatically refreshing Arch Keyring..." 10 80
@@ -510,16 +501,6 @@ function removePackage() {
   pacman --remove -dd "${pkg_array[@]}" 1>&3 || echo "Conflicting package(s) not installed"
 }
 function installPackage() {
-  if [[ "${debug}" == 1 ]]; then
-    local pkg="${1}"
-    local pkg_array
-    IFS=' ' read -r -a pkg_array <<< "${pkg}"
-    for p in "${pkg_array[@]}"; do
-      touch "${debugDir}"/bin/"${p}" >&3
-    done
-    sleep $((RANDOM % 2 + 1))
-    return 0
-  fi
   IFS=' ' read -r -a pkg_array <<< "${1}"
   pacman --noconfirm --disable-download-timeout --needed --sync "${pkg_array[@]}" 1>&3
 }
@@ -531,18 +512,18 @@ function maininstall() {
   fi
   {
     echo $((n * 100 / total))
-  } | whiptail --title "${debug:+[DEBUG] }Installation in progress..." --gauge "Installing \"${pkg}\" (${n} of ${total}).\n\n${2}" 10 80 0
+  } | whiptail --title "Installation in progress..." --gauge "Installing \"${pkg}\" (${n} of ${total}).\n\n${2}" 10 80 0
   if [[ "${3}" != '' ]]; then
     removePackage "${3}"
   fi
   installPackage "${1}"
 }
 function gitcloneinstall() {
-  local url="${1%% *}"
-  local toPath="${1#* }"
+  local url="${1}"
+  local toPath="${2}"
   {
     echo $((n * 100 / total))
-  } | whiptail --title "${debug:+[DEBUG] }Installation in progress..." --gauge "Installing \"${url}\" (${n} of ${total}).\n\n${2}" 10 80 0
+  } | whiptail --title "Installation in progress..." --gauge "Installing \"${url}\" (${n} of ${total}).\n\n${2}" 10 80 0
   if [[ -d "/home/${username:?}/${toPath:?}" ]]; then
     rm -rf "/home/${username:?}/${toPath:?}"
   fi
@@ -550,104 +531,77 @@ function gitcloneinstall() {
 
 }
 function nerdfontinstall() {
-  local font="${1}"
+  local fonts="${1}"
+  local purpose="${2}"
+  local fontsDir="/home/${username}/.local/share/fonts"
+  local font_array
+  IFS=' ' read -r -a font_array <<< "${fonts}"
+  [[ -d "${fontsDir}" ]] || mkdir --parents --verbose "${fontsDir}" >&3 && chown -R "${username}:${username}" "${fontsDir}" >&3
+
   local version
-  {
-    echo $((n * 100 / total))
-  } | whiptail --title "${debug:+[DEBUG] }Installation in progress..." --gauge "Installing \"${font}\" (${n} of ${total}).\n\n${2}" 10 80 0
-  fontsDir="$([[ -z "${XDG_DATA_HOME-}" ]] && printf %s "/home/${username}/.local/share/fonts" || printf %s "${XDG_DATA_HOME}/fonts")"
-  [[ -d "${fontsDir:?}" ]] || mkdir --parents --verbose "${fontsDir:?}" >&3 && chown -R "${username}:${username}" "${fontsDir:?}" >&3
-  if [[ -d "${fontsDir:?}"/"${font:?}" ]]; then
-    rm --force --recursive --verbose "${fontsDir:?}"/"${font:?}" >&3
-  fi
-  version=$(curl -s https://api.github.com/repos/ryanoasis/nerd-fonts/releases/latest \
-    | grep "tag_name" \
-    | awk '{ print $2 }' \
-    | sed 's/,$//' \
-    | sed 's/"//g')
-  curl --location https://github.com/ryanoasis/nerd-fonts/releases/download/"${version}"/"${font:?}".zip --output "${scriptTempDir:?}"/"${font:?}".zip >&3
-  mkdir --verbose --parents "${fontsDir:?}"/"${font:?}" >&3
-  unzip -o "${scriptTempDir:?}"/"${font:?}".zip -d "${fontsDir:?}"/"${font:?}"/ >&3
-  chown -R "${username}:${username}" "${fontsDir:?}"/"${font:?}"/
+  for font in "${font_array[@]}"; do
+    {
+      echo $((n * 100 / total))
+    } | whiptail --title "Installation in progress..." --gauge "Installing \"${font}\" (${n} of ${total}).\n\n${purpose}" 10 80 0
+    if [[ -d "${fontsDir:?}"/"${font:?}" ]]; then
+      rm --force --recursive --verbose "${fontsDir:?}"/"${font:?}" >&3
+    fi
+    version=$(curl -s https://api.github.com/repos/ryanoasis/nerd-fonts/releases/latest \
+      | grep "tag_name" \
+      | awk '{ print $2 }' \
+      | sed 's/,$//' \
+      | sed 's/"//g')
+    curl --location https://github.com/ryanoasis/nerd-fonts/releases/download/"${version}"/"${font:?}".zip --output "${scriptTempDir:?}"/"${font:?}".zip >&3
+    mkdir --verbose --parents "${fontsDir:?}"/"${font:?}" >&3
+    unzip -o "${scriptTempDir:?}"/"${font:?}".zip -d "${fontsDir:?}"/"${font:?}"/ #>&3
+    chown -R "${username}:${username}" "${fontsDir:?}"/"${font:?}"
+  done
   fc-cache --really-force >&3
 }
-function aurinstall() {
-  local max_len=30
-  local pkg="${1}"
-  if [[ "${#pkg}" -gt "${max_len}" ]]; then
-    pkg="${pkg:0:max_len}..."
-  fi
-  {
-    echo $((n * 100 / total))
-  } | whiptail --title "${debug:+[DEBUG] }Installation in progress..." --gauge "Installing \"${pkg}\" (${n} of ${total}).\n\n${2}" 10 80 0
-  installPackage "${1}"
-}
 function postInstallationLoop() {
-  if [[ "${debug}" == 1 ]]; then
-    return 0
-  fi
-  whiptail --title "${debug:+[DEBUG] }Enabling services (libvirtd, sshd and ufw)..." 10 80 0
+  whiptail --title "Enabling services (libvirtd, sshd and ufw)..." 10 80 0
   systemctl enable libvirtd.service >&3 # Enable Libvirtd ("Virtualization")
   systemctl enable sshd.service >&3     # Enable openssh Service
   systemctl enable ufw.service >&3      # Enable firewall Service
   ufw enable >&3                        # Enable firewall
 }
 function installationloop() {
-  post_user_setup=()
-  local progsfile="${scriptDir}/data/packages/csv"
+  local total
 
-  local root=/
-  if [[ "${debug}" == 1 ]]; then
-    root="${debugDir}"
-  fi
-
-  ([[ -f "${progsfile}" ]] && cp "${progsfile}" "${root}"/tmp/progs.csv) \
-    || curl -Ls "${progsfile}" | sed '/^#/d' > "${root}"/tmp/progs.csv
-  total=$(wc -l < "${root}"/tmp/progs.csv)
-  n=-1
-  while IFS=, read -r tag purpose conflict package; do
+  total=$(jq length "${progsfile}")
+  n=0
+  jq -c '.[]' "${progsfile}" | while read -r obj; do
     n=$((n + 1))
-    [[ n -eq 0 ]] && continue
-    tag=$(echo "${tag}" | xargs)
-    purpose=$(echo "${purpose}" | xargs)
-    conflict=$(echo "${conflict}" | xargs)
-    package=$(echo "${package}" | xargs)
-    echo "${purpose}" | grep -q "^\".*\"$" \
-      && purpose="$(echo "${purpose}" | sed -E "s/(^\"|\"$)//g")"
-    case "${tag}" in
-      "G" | "N")
-        post_user_setup+=("${tag},${purpose},${package}")
+    type="$(jq -r '.type' <<< "${obj}")"
+    purpose="$(jq -r '.purpose' <<< "${obj}")"
+
+    case "${type}" in
+      "github")
+        repo="$(jq -r '.repo' <<< "${obj}")"
+        dir="$(jq -r '.dir' <<< "${obj}")"
+        gitcloneinstall "${repo}" "${dir}" "${purpose}"
         ;;
-      *) maininstall "${package}" "${purpose}" "${conflict}" ;;
-    esac
-  done < "${root}"/tmp/progs.csv
-}
-function installUserSpecificPackages() {
-  for line in "${post_user_setup[@]}"; do
-    IFS=, read -r tag purpose package <<< "${line}"
-    case "${tag}" in
-      "G") gitcloneinstall "${package}" "${purpose}" ;;
-      "N") nerdfontinstall "${package}" "${purpose}" ;;
-      *) break ;;
+      "nerdfont")
+        fonts="$(jq -r '.fonts | join(" ")' <<< "${obj}")"
+        nerdfontinstall "${fonts}" "${purpose}"
+        ;;
+      *)
+        conflicts="$(jq -r '.conflicts | join(" ")' <<< "${obj}")"
+        packages="$(jq -r '.packages | join(" ")' <<< "${obj}")"
+        maininstall "${packages}" "${purpose}" "${conflicts}"
+        ;;
     esac
   done
 }
 
 function obtainTimezone() {
-  timezone=$(whiptail --title "${debug:+[DEBUG] }Timezone" --inputbox "First, please enter your timezone." 10 60 3>&1 1>&2 2>&3) || exit 1
+  timezone=$(whiptail --title "Timezone" --inputbox "First, please enter your timezone." 10 60 3>&1 1>&2 2>&3) || exit 1
   while [[ ! -f "/usr/share/zoneinfo/${timezone}" ]]; do
-    timezone=$(whiptail --title "${debug:+[DEBUG] }Timezone" --nocancel --inputbox "Timezone not valid. You can always check for your timezone in \"/usr/share/zoneinfo\" (e.g: America/New_York)" 10 70 3>&1 1>&2 2>&3)
+    timezone=$(whiptail --title "Timezone" --nocancel --inputbox "Timezone not valid. You can always check for your timezone in \"/usr/share/zoneinfo\" (e.g: America/New_York)" 10 70 3>&1 1>&2 2>&3)
   done
 }
 function configTimezone() {
-  whiptail --title "${debug:+[DEBUG] }Installation in progress..." --infobox "Configuring timezone..." 10 80
-  if [[ "${debug}" == 1 ]]; then
-    cp /usr/share/zoneinfo/"${timezone}" "${debugDir}"/etc/timezone >&3
-    echo 'hwclock --systohc --verbose' >&3
-    sleep $((RANDOM % 2 + 1))
-    return 0
-  fi
-
+  whiptail --title "Installation in progress..." --infobox "Configuring timezone..." 10 80
   ln --symbolic --force --verbose \
     /usr/share/zoneinfo/"${timezone}" \
     /etc/timezone >&3
@@ -655,31 +609,26 @@ function configTimezone() {
 }
 
 function obtainHostname() {
-  hostname=$(whiptail --title "${debug:+[DEBUG] }Hostname" --inputbox "Please, enter the desired hostname: " 10 60 3>&1 1>&2 2>&3) || exit 1
+  hostname=$(whiptail --title "Hostname" --inputbox "Please, enter the desired hostname: " 10 60 3>&1 1>&2 2>&3) || exit 1
   while ! [[ "${hostname}" =~ ^([a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)*([a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)$ && "${#hostname}" -le 253 ]]; do
-    hostname=$(whiptail --title "${debug:+[DEBUG] }Hostname" --nocancel --inputbox "Invalid hostname. Use only letters, numbers, and hyphens. Do not start or end with a hyphen. Max 253 characters, each part up to 63." 10 70 3>&1 1>&2 2>&3)
+    hostname=$(whiptail --title "Hostname" --nocancel --inputbox "Invalid hostname. Use only letters, numbers, and hyphens. Do not start or end with a hyphen. Max 253 characters, each part up to 63." 10 70 3>&1 1>&2 2>&3)
   done
 
-  prettyHostname=$(whiptail --title "${debug:+[DEBUG] }Hostname" --inputbox "Please, enter a human-readable machine identifier string for the hostname \"${hostname}\": " 10 60 3>&1 1>&2 2>&3) || exit 1
+  prettyHostname=$(whiptail --title "Hostname" --inputbox "Please, enter a human-readable machine identifier string for the hostname \"${hostname}\": " 10 60 3>&1 1>&2 2>&3) || exit 1
   while ! [[ "${prettyHostname}" =~ ^[^[:cntrl:]]{1,256}$ && "${prettyHostname}" =~ [^[:space:]] ]]; do
-    prettyHostname=$(whiptail --title "${debug:+[DEBUG] }Hostname" --nocancel --inputbox "Invalid pretty hostname. Can include spaces, accents, and symbols, but no line breaks or control characters. Max 256 characters." 10 70 3>&1 1>&2 2>&3)
+    prettyHostname=$(whiptail --title "Hostname" --nocancel --inputbox "Invalid pretty hostname. Can include spaces, accents, and symbols, but no line breaks or control characters. Max 256 characters." 10 70 3>&1 1>&2 2>&3)
   done
 
   chassis=$(
-    whiptail --title "${debug:+[DEBUG] }Pretty hostname - Chassis" --menu "Choose an option" 15 60 5 \
+    whiptail --title "Pretty hostname - Chassis" --menu "Choose an option" 15 60 5 \
       "desktop" " I'm installing linux on a Desktop" \
       "laptop" " I'm installing linux on a Laptop" \
       "vm" " I'm installing linux on a VM" 3>&1 1>&2 2>&3
   ) || exit 1
 }
 function configHostname() {
-  whiptail --title "${debug:+[DEBUG] }Installation in progress..." --infobox "Configuring hostname..." 10 80
-  local root=/
-  if [[ "${debug}" == 1 ]]; then
-    root="${debugDir}"
-  fi
-
-  printf "%s\n" "${hostname}" | tee "${root}"/etc/hostname >&3
+  whiptail --title "Installation in progress..." --infobox "Configuring hostname..." 10 80
+  printf "%s\n" "${hostname}" | tee /etc/hostname >&3
   {
     printf "# Static table lookup for hostnames.\n"
     printf "# See hosts(5) for details\n"
@@ -687,28 +636,17 @@ function configHostname() {
     printf "127.0.0.1    localhost\n"
     printf "::1          localhost\n"
     printf "127.0.1.1    %s.localhost    %s\n" "${hostname}" "${hostname}"
-  } | tee "${root}"/etc/hosts >&3
+  } | tee /etc/hosts >&3
   {
     printf "PRETTY_HOSTNAME=\"%s\"\n" "${prettyHostname}"
     printf "ICON_NAME=computer\n"
     printf "CHASSIS=%s\n" "${chassis}"
     printf "DEPLOYMENT=production\n"
-  } | tee "${root}"/etc/machine-info >&3
+  } | tee /etc/machine-info >&3
 
-  if [[ ${debug} == 1 ]]; then
-    touch "${root}"/bin/networkmanager >&3
-    touch "${root}"/bin/dhcpcd >&3
-    touch "${root}"/bin/openssh >&3
-    touch "${root}"/bin/wpa_supplicant >&3
-    echo "systemctl enable NetworkManager.service" >&3
-    echo "systemctl enable dhcpcd.service" >&3
-    sleep $((RANDOM % 2 + 1))
-    return 0
-  else
-    pacman --sync --needed networkmanager dhcpcd openssh wpa_supplicant --noconfirm >&3
-    systemctl enable NetworkManager.service >&3
-    systemctl enable dhcpcd.service >&3
-  fi
+  pacman --sync --needed networkmanager dhcpcd openssh wpa_supplicant --noconfirm >&3
+  systemctl enable NetworkManager.service >&3
+  systemctl enable dhcpcd.service >&3
 }
 
 function obtainBootLoader() {
@@ -721,7 +659,7 @@ function obtainBootLoader() {
   local root_device
 
   bootLoader=$(
-    whiptail --title "${debug:+[DEBUG] }Bootloader" --menu "Choose an option" 15 60 5 \
+    whiptail --title "Bootloader" --menu "Choose an option" 15 60 5 \
       "1" "systemd-boot" \
       "2" "grub" 3>&1 1>&2 2>&3
   ) || exit 1
@@ -736,7 +674,7 @@ function obtainBootLoader() {
   if [[ ${#disks[@]} -eq 1 ]]; then
     selected_disk="${disks[0]}"
   else
-    selected_disk=$(whiptail --title "${debug:+[DEBUG] }Select root disk" \
+    selected_disk=$(whiptail --title "Select root disk" \
       --menu "Choose the disk where the partition allocated to root (/) is located:" 15 60 6 \
       "${disk_menu[@]}" \
       3>&1 1>&2 2>&3) || cancelInstallation 'abortado'
@@ -752,7 +690,7 @@ function obtainBootLoader() {
   if [[ ${#parts[@]} -eq 1 ]]; then
     selected_part="${parts[0]}"
   else
-    selected_part=$(whiptail --title "${debug:+[DEBUG] }Select root partition" \
+    selected_part=$(whiptail --title "Select root partition" \
       --menu "Choose the partition allocated to root (/):" 15 60 6 \
       "${parts_menu[@]}" \
       3>&1 1>&2 2>&3) || cancelInstallation 'abortado'
@@ -765,19 +703,14 @@ function obtainBootLoader() {
 }
 function obtainCPUVendor() {
   cpuVendor=$(
-    whiptail --title "${debug:+[DEBUG] }CPU Vendor" --menu "Choose an option" 15 60 5 \
+    whiptail --title "CPU Vendor" --menu "Choose an option" 15 60 5 \
       "intel" " Intel CPU" \
       "amd" " AMD CPU" 3>&1 1>&2 2>&3
   ) || cancelInstallation
 
 }
 function installMicrocode() {
-  whiptail --title "${debug:+[DEBUG] }Installation in progress..." --infobox "Installing microcode..." 10 80
-  if [[ "${debug}" == 1 ]]; then
-    sleep $((RANDOM % 2 + 1))
-    touch "${debugDir}"/bin/micro-code >&3
-    return 0
-  fi
+  whiptail --title "Installation in progress..." --infobox "Installing microcode..." 10 80
 
   if [[ "${cpuVendor}" == "intel" ]]; then
     pacman --sync --needed intel-ucode --noconfirm >&3
@@ -786,23 +719,17 @@ function installMicrocode() {
   fi
 }
 function configBootloader() {
-  whiptail --title "${debug:+[DEBUG] }Installation in progress..." --infobox "Configuring bootloader..." 10 80
-  local root=/
-  if [[ "${debug}" == 1 ]]; then
-    root="${debugDir}"
-  fi
-
-  sleep $((RANDOM % 2 + 1))
+  whiptail --title "Installation in progress..." --infobox "Configuring bootloader..." 10 80
 
   if [[ "${bootLoader}" == "1" ]]; then
-    [[ "${debug}" != 1 ]] && bootctl install >&3
+    bootctl install >&3
 
     {
       printf "default      arch.conf\n"
       printf "timeout      1\n"
       printf "console-mode max\n"
       printf "editor       no\n"
-    } | tee "${root}"/boot/loader/loader.conf >&3
+    } | tee /boot/loader/loader.conf >&3
     if [[ "${partition_type}" == "crypto_LUKS" && "${root_device_uuid}" != "${partition_uuid}" ]]; then
       {
         printf "title   Arch Linux\n"
@@ -810,14 +737,14 @@ function configBootloader() {
         printf "initrd  /%s-ucode.img\n" "${cpuVendor}"
         printf "initrd  /initramfs-linux.img\n"
         printf 'options cryptdevice=UUID=%s:lvm root=UUID=%s rw\n' "${partition_uuid}" "${root_device_uuid}"
-      } | tee "${root}"/boot/loader/entries/arch.conf >&3
+      } | tee /boot/loader/entries/arch.conf >&3
       {
         printf "title   Arch Linux (fallback initramfs)\n"
         printf "linux   /vmlinuz-linux\n"
         printf "initrd  /%s-ucode.img\n" "${cpuVendor}"
         printf "initrd  /initramfs-linux-fallback.img\n"
         printf 'options cryptdevice=UUID=%s:lvm root=UUID=%s rw\n' "${partition_uuid}" "${root_device_uuid}"
-      } | tee "${root}"/boot/loader/entries/arch-fallback.conf >&3
+      } | tee /boot/loader/entries/arch-fallback.conf >&3
     else
       {
         printf "title   Arch Linux\n"
@@ -825,44 +752,28 @@ function configBootloader() {
         printf "initrd  /%s-ucode.img\n" "${cpuVendor}"
         printf "initrd  /initramfs-linux.img\n"
         printf 'options root=UUID=%s rw\n' "${root_device_uuid}"
-      } | tee "${root}"/boot/loader/entries/arch.conf >&3
+      } | tee /boot/loader/entries/arch.conf >&3
       {
         printf "title   Arch Linux (fallback initramfs)\n"
         printf "linux   /vmlinuz-linux\n"
         printf "initrd  /%s-ucode.img\n" "${cpuVendor}"
         printf "initrd  /initramfs-linux-fallback.img\n"
         printf 'options root=UUID=%s rw\n' "${root_device_uuid}"
-      } | tee "${root}"/boot/loader/entries/arch-fallback.conf >&3
+      } | tee /boot/loader/entries/arch-fallback.conf >&3
     fi
 
-    [[ "${debug}" != 1 ]] && mkinitcpio -p linux >&3
-
-    if [[ "${debug}" == 1 ]]; then
-      echo 'systemctl enable systemd-boot-update.service' >&3
-    else
-      systemctl enable systemd-boot-update.service >&3
-    fi
+    mkinitcpio -p linux >&3
+    systemctl enable systemd-boot-update.service >&3
   fi
 
   if [[ "${bootLoader}" == "2" ]]; then
-    if [[ "${debug}" == 1 ]]; then
-      touch "${debugDir}"/bin/grub >&3
-      touch "${debugDir}"/bin/efibootmgr >&3
-      cp /etc/default/grub "${debugDir}"/etc/default/grub >&3
-      sed --expression 's/GRUB_TIMEOUT=5/GRUB_TIMEOUT=0/g' \
-        --in-place "${debugDir}"/etc/default/grub >&3
-      echo 'grub-install --target=x86_64-efi --efi-directory=/boot \
-      --bootloader-id=GRUB --recheck' >&3
-      echo 'grub-mkconfig -o /boot/grub/grub.cfg' >&3
-    else
-      pacman --sync --needed --noconfirm grub efibootmgr >&3
-      grub-install --target=x86_64-efi --efi-directory=/boot \
-        --bootloader-id=GRUB --recheck >&3
-      sed --expression 's/GRUB_TIMEOUT=5/GRUB_TIMEOUT=0/g' \
-        --in-place /etc/default/grub >&3
-      grub-mkconfig -o /boot/grub/grub.cfg >&3
-      systemctl enable systemd-boot-update.service >&3
-    fi
+    pacman --sync --needed --noconfirm grub efibootmgr >&3
+    grub-install --target=x86_64-efi --efi-directory=/boot \
+      --bootloader-id=GRUB --recheck >&3
+    sed --expression 's/GRUB_TIMEOUT=5/GRUB_TIMEOUT=0/g' \
+      --in-place /etc/default/grub >&3
+    grub-mkconfig -o /boot/grub/grub.cfg >&3
+    systemctl enable systemd-boot-update.service >&3
   fi
 }
 function check_mkinitcipio_hooks() {
@@ -874,16 +785,14 @@ function check_mkinitcipio_hooks() {
 }
 
 function configLocale() {
-  whiptail --title "${debug:+[DEBUG] }Installation in progress..." --infobox "Configuring locale..." 10 80
-  local root=/
-  if [[ "${debug}" == 1 ]]; then
-    root="${debugDir}"
-  fi
+  whiptail --title "Installation in progress..." --infobox "Configuring locale..." 10 80
 
   if ! grep -q '^[^#]*en_US.UTF-8 UTF-8' /etc/locale.gen; then
-    printf "en_US.UTF-8 UTF-8\n" | tee --append "${root}"/etc/locale.gen >&3
+    printf "en_US.UTF-8 UTF-8\n" | tee --append /etc/locale.gen >&3
   fi
-  [[ "${debug}" != 1 ]] && locale-gen >&3
+
+  locale-gen >&3
+
   {
     printf "LANG=en_US.UTF-8\n"
     printf "LANGUAGE=en_US:en:C\n"
@@ -901,30 +810,18 @@ function configLocale() {
     printf "LC_TELEPHONE=en_US\n"
     printf "LC_TIME=en_US\n"
     printf "LC_ALL="
-  } | tee "${root}"/etc/locale.conf >&3
+  } | tee /etc/locale.conf >&3
 }
 function configKeyboardLayout() {
-  whiptail --title "${debug:+[DEBUG] }Installation in progress..." --infobox "Configuring console keyboard..." 10 80
-
-  local root=/
-  if [[ "${debug}" == 1 ]]; then
-    root="${debugDir}"
-  fi
-
-  printf "KEYMAP=us-acentos\n" | tee "${root}"/etc/vconsole.conf >&3
+  whiptail --title "Installation in progress..." --infobox "Configuring console keyboard..." 10 80
+  printf "KEYMAP=us-acentos\n" | tee /etc/vconsole.conf >&3
 }
 function configPackageManager() {
-  whiptail --title "${debug:+[DEBUG] }Installation in progress..." --infobox "Configuring pacman..." 10 80
-
-  local root=/
-  if [[ "${debug}" == 1 ]]; then
-    root="${debugDir}"
-    cp /etc/pacman.conf "${debugDir}"/etc/pacman.conf >&3
-  fi
+  whiptail --title "Installation in progress..." --infobox "Configuring pacman..." 10 80
 
   local multilib
   multilib=$(
-    grep --line-number "\[multilib\]" "${root}"/etc/pacman.conf \
+    grep --line-number "\[multilib\]" /etc/pacman.conf \
       | head -1 \
       | cut --fields=1 --delimiter=:
   )
@@ -933,43 +830,32 @@ function configPackageManager() {
     --expression 's/#CheckSpace/CheckSpace/g' \
     --expression 's/#VerbosePkgLists/VerbosePkgLists/g' \
     --expression 's/#UseSyslog/UseSyslog/g' \
-    --in-place=.bak "${root}"/etc/pacman.conf >&3
-  sed -i "/VerbosePkgLists/a ILoveCandy" "${root}"/etc/pacman.conf >&3
+    --in-place=.bak /etc/pacman.conf >&3
+  sed -i "/VerbosePkgLists/a ILoveCandy" /etc/pacman.conf >&3
   if [[ -n "${multilib}" ]]; then
     sed --expression "${multilib}s/^#//g" \
       --expression "$((multilib + 1))s/^#//g" \
-      --in-place "${root}"/etc/pacman.conf >&3
+      --in-place /etc/pacman.conf >&3
   else
     {
       printf '\n\n'
       printf '[multilib]\n'
       printf 'Include = /etc/pacman.d/mirrorlist\n'
-    } | tee --append "${root}"/etc/pacman.conf >&3
+    } | tee --append /etc/pacman.conf >&3
   fi
 }
 function configSudo() {
-  whiptail --title "${debug:+[DEBUG] }Installation in progress..." --infobox "Configuring sudo..." 10 80
-
-  local root=/
-  if [[ "${debug}" == 1 ]]; then
-    root="${debugDir}"
-    cp /etc/pacman.conf "${debugDir}"/etc/pacman.conf >&3
-  fi
+  whiptail --title "Installation in progress..." --infobox "Configuring sudo..." 10 80
 
   {
     printf "%%wheel    ALL=(ALL:ALL) ALL\n"
     printf "\n"
     printf "Defaults lecture = always\n"
     printf "Defaults insults\n"
-  } | tee "${root}"/etc/sudoers.d/custom >&3
+  } | tee /etc/sudoers.d/custom >&3
 }
 function configFiles() {
-  whiptail --title "${debug:+[DEBUG] }Installation in progress..." --infobox "Replacing config files..." 10 80
-
-  local root=/
-  if [[ "${debug}" == 1 ]]; then
-    root="${debugDir}"
-  fi
+  whiptail --title "Installation in progress..." --infobox "Replacing config files..." 10 80
 
   cp --recursive --verbose \
     "${scriptDir}"/data/etc/X11 \
@@ -978,50 +864,41 @@ function configFiles() {
     "${scriptDir}"/data/etc/pulse \
     "${scriptDir}"/data/etc/systemd \
     "${scriptDir}"/data/etc/tmpfiles.d \
-    "${root}"/etc >&3
+    /etc >&3
 }
 function configDefaultHomeDirectories() {
-  whiptail --title "${debug:+[DEBUG] }Installation in progress..." --infobox "Replacing default directories..." 10 80
+  whiptail --title "Installation in progress..." --infobox "Replacing default directories..." 10 80
 
-  local root=/
-  if [[ "${debug}" == 1 ]]; then
-    root="${debugDir}"
-  fi
+  rm --force --recursive --verbose /etc/skel/* >&3
 
-  [[ "${debug}" != 1 ]] && rm --force --recursive --verbose /etc/skel/* >&3
   mkdir --verbose \
-    "${root}"/etc/skel/.config \
-    "${root}"/etc/skel/.local \
-    "${root}"/etc/skel/.local/bin \
-    "${root}"/etc/skel/.local/share/ \
-    "${root}"/etc/skel/.local/share/BLAST \
-    "${root}"/etc/skel/.local/share/fonts \
-    "${root}"/etc/skel/.local/share/icons \
-    "${root}"/etc/skel/.local/share/themes \
-    "${root}"/etc/skel/Desktop \
-    "${root}"/etc/skel/Documents \
-    "${root}"/etc/skel/Downloads \
-    "${root}"/etc/skel/Music \
-    "${root}"/etc/skel/Pictures \
-    "${root}"/etc/skel/Pictures/Screenshots \
-    "${root}"/etc/skel/Pictures/Wallpapers \
-    "${root}"/etc/skel/Projects \
-    "${root}"/etc/skel/Public \
-    "${root}"/etc/skel/Repositories \
-    "${root}"/etc/skel/Templates \
-    "${root}"/etc/skel/Videos \
-    "${root}"/etc/skel/Virtual\ Machines \
-    "${root}"/etc/skel/Virtual\ Machines/Disks \
-    "${root}"/etc/skel/Virtual\ Machines/Images \
-    "${root}"/etc/skel/Work >&3
+    /etc/skel/.config \
+    /etc/skel/.local \
+    /etc/skel/.local/bin \
+    /etc/skel/.local/share/ \
+    /etc/skel/.local/share/BLAST \
+    /etc/skel/.local/share/fonts \
+    /etc/skel/.local/share/icons \
+    /etc/skel/.local/share/themes \
+    /etc/skel/Desktop \
+    /etc/skel/Documents \
+    /etc/skel/Downloads \
+    /etc/skel/Music \
+    /etc/skel/Pictures \
+    /etc/skel/Pictures/Screenshots \
+    /etc/skel/Pictures/Wallpapers \
+    /etc/skel/Projects \
+    /etc/skel/Public \
+    /etc/skel/Repositories \
+    /etc/skel/Templates \
+    /etc/skel/Videos \
+    /etc/skel/Virtual\ Machines \
+    /etc/skel/Virtual\ Machines/Disks \
+    /etc/skel/Virtual\ Machines/Images \
+    /etc/skel/Work >&3
 }
 function configXDGBaseDirectory() {
-  whiptail --title "${debug:+[DEBUG] }Installation in progress..." --infobox "Configuring XDGBaseDir..." 10 80
-
-  local root=/
-  if [[ "${debug}" == 1 ]]; then
-    root="${debugDir}"
-  fi
+  whiptail --title "Installation in progress..." --infobox "Configuring XDGBaseDir..." 10 80
 
   {
     printf "\n# Default Editor\n"
@@ -1032,55 +909,52 @@ function configXDGBaseDirectory() {
     printf "export XDG_CACHE_HOME=\"\${HOME}\"/.local/cache\n"
     printf "export XDG_DATA_HOME=\"\${HOME}\"/.local/share\n"
     printf "export XDG_STATE_HOME=\"\${HOME}\"/.local/state\n"
-  } | tee "${root}"/etc/skel/.profile >&3
+  } | tee /etc/skel/.profile >&3
 }
 
-function obtainUserAndPassword() {
-  username=$(whiptail --title "${debug:+[DEBUG] }Username" --inputbox "Please enter a username for the account." 10 60 3>&1 1>&2 2>&3) || exit 1
+function obtainUser() {
+  username=$(whiptail --title "Username" --inputbox "Please enter the username of the targeted user" 10 60 3>&1 1>&2 2>&3) || exit 1
   while ! [[ "${username}" =~ ^[a-z_][a-z0-9_-]*$ ]]; do
-    username=$(whiptail --title "${debug:+[DEBUG] }Username" --nocancel --inputbox "Invalid username. It must begin with a letter, contain only lowercase letters, numbers, hyphens, or underscores." 10 60 3>&1 1>&2 2>&3)
+    username=$(whiptail --title "Username" --nocancel --inputbox "Invalid username. It must begin with a letter, contain only lowercase letters, numbers, hyphens, or underscores." 10 60 3>&1 1>&2 2>&3)
   done
-  name=$(whiptail --title "${debug:+[DEBUG] }Username" --inputbox "Please enter a name for the \"${username}\" account." 10 60 3>&1 1>&2 2>&3) || exit 1
+}
+function obtainUserAndPassword() {
+  username=$(whiptail --title "Username" --inputbox "Please enter a username for the account." 10 60 3>&1 1>&2 2>&3) || exit 1
+  while ! [[ "${username}" =~ ^[a-z_][a-z0-9_-]*$ ]]; do
+    username=$(whiptail --title "Username" --nocancel --inputbox "Invalid username. It must begin with a letter, contain only lowercase letters, numbers, hyphens, or underscores." 10 60 3>&1 1>&2 2>&3)
+  done
+  name=$(whiptail --title "Username" --inputbox "Please enter a name for the \"${username}\" account." 10 60 3>&1 1>&2 2>&3) || exit 1
   while [[ -z "${name}" || "${name}" =~ ^[[:space:]] || "${name}" =~ [[:space:]]$ ]]; do
-    name=$(whiptail --title "${debug:+[DEBUG] }Username" --nocancel --inputbox "Invalid name." 10 60 3>&1 1>&2 2>&3)
+    name=$(whiptail --title "Username" --nocancel --inputbox "Invalid name." 10 60 3>&1 1>&2 2>&3)
   done
-  password1=$(whiptail --title "${debug:+[DEBUG] }Username" --nocancel --passwordbox "Enter a password for \"${username}\"." 10 60 3>&1 1>&2 2>&3)
-  password2=$(whiptail --title "${debug:+[DEBUG] }Username" --nocancel --passwordbox "Retype password for \"${username}\"." 10 60 3>&1 1>&2 2>&3)
+  password1=$(whiptail --title "Username" --nocancel --passwordbox "Enter a password for \"${username}\"." 10 60 3>&1 1>&2 2>&3)
+  password2=$(whiptail --title "Username" --nocancel --passwordbox "Retype password for \"${username}\"." 10 60 3>&1 1>&2 2>&3)
   while [[ -z "${password1}" || -z "${password2}" || "${password1}" != "${password2}" ]]; do
     unset -v password2 password1
-    password1=$(whiptail --title "${debug:+[DEBUG] }Username" --nocancel --passwordbox "Passwords do not match.\\n\\nEnter password again." 10 60 3>&1 1>&2 2>&3)
-    password2=$(whiptail --title "${debug:+[DEBUG] }Username" --nocancel --passwordbox "Retype password." 10 60 3>&1 1>&2 2>&3)
+    password1=$(whiptail --title "Username" --nocancel --passwordbox "Passwords do not match.\\n\\nEnter password again." 10 60 3>&1 1>&2 2>&3)
+    password2=$(whiptail --title "Username" --nocancel --passwordbox "Retype password." 10 60 3>&1 1>&2 2>&3)
   done
 }
 function checkUserExists() {
   ! { id -u "${username}" >&3; } \
-    || whiptail --title "${debug:+[DEBUG] }WARNING" --yes-button "CONTINUE" \
+    || whiptail --title "WARNING" --yes-button "CONTINUE" \
       --no-button "No wait..." \
       --yesno "The user \`${username}\` already exists on this system. BLAST can install for a user already existing, but it will OVERWRITE any conflicting settings/dotfiles on the user account.\\n\\BLAST will NOT overwrite your user files, documents, videos, etc., so don't worry about that, but only click <CONTINUE> if you don't mind your settings being overwritten.\\n\\nNote also that BLAST will change ${username}'s password to the one you just gave." 14 70
 }
 function configUser() {
-  whiptail --title "${debug:+[DEBUG] }Installation in progress..." --infobox "Configuring username..." 10 80
-  if [[ "${debug}" == 1 ]]; then
-    sleep $((RANDOM % 2 + 1))
-    return 0
-  fi
-
+  whiptail --title "Installation in progress..." --infobox "Configuring username..." 10 80
   useradd --comment "${name}" \
     --create-home \
-    --groups wheel,i2c,libvirt \
+    --groups wheel \
     --shell /bin/zsh \
     "${username}" >&3 \
-    || usermod --append --groups wheel,i2c,libvirt --comment "${name}" && mkdir -p /home/"${username}" && chown "${username}":wheel /home/"${username}"
+    || usermod --append --groups wheel --comment "${name}" && mkdir -p /home/"${username}" && chown "${username}":wheel /home/"${username}"
   echo "${username}:${password1}" | chpasswd
+
   unset password1 password2
 }
 function makeUserJS() {
-  whiptail --title "${debug:+[DEBUG] }Installation in progress..." --infobox "Setting browser privacy settings and add-ons..." 10 80
-
-  if [[ "${debug}" == 1 ]]; then
-    sleep $((RANDOM % 2 + 1))
-    return 0
-  fi
+  whiptail --title "Installation in progress..." --infobox "Setting browser privacy settings and add-ons..." 10 80
 
   local upstreamUserJSURL='https://raw.githubusercontent.com/yokoffing/Betterfox/refs/heads/main/user.js'
   local browserDir="/home/${username}/.mozilla/firefox"
@@ -1105,16 +979,55 @@ function makeUserJS() {
 }
 
 function cloneConfigFiles() {
-  whiptail --title "${debug:+[DEBUG] }Installation in progress..." --infobox "Configuring dotfiles..." 10 80
-  if [[ "${debug}" == 1 ]]; then
-    sleep $((RANDOM % 2 + 1))
-    return 0
-  fi
+  whiptail --title "Installation in progress..." --infobox "Configuring dotfiles..." 10 80
   [[ -d /home/"${username}"/.local/share/BLAST/dotfiles ]] && rm -rf /home/"${username}"/.local/share/BLAST/dotfiles
   git clone --bare https://github.com/gabrielgnsilva/dotfiles -b dev /home/"${username}"/.local/share/BLAST/dotfiles
   git --git-dir=/home/"${username}"/.local/share/BLAST/dotfiles --work-tree=/home/"${username}" checkout -f
   sed --expression "s/CURRENTUSERNAME/${username}/g" \
     --in-place /home/"${username}"/.config/gtk-3.0/bookmarks
+}
+
+function system_setup() {
+  # Welcome the user and obtain the necessary data *before* processing it
+  welcome
+  obtainTimezone
+  obtainHostname
+  obtainCPUVendor
+  obtainBootLoader
+  check_mkinitcipio_hooks
+  obtainUserAndPassword
+  checkUserExists
+  confirmInstall
+
+  # Install
+  refreshKeys
+  configTimezone
+  configHostname
+  installMicrocode
+  configBootloader
+  configLocale
+  configKeyboardLayout
+  configPackageManager
+  configSudo
+  configFiles
+  configDefaultHomeDirectories
+  configXDGBaseDirectory
+  configUser
+
+  # End installation
+  finalize
+}
+
+function programs_setup() {
+  # Welcome the user and obtain the necessary data *before* processing it
+  welcome
+  obtainUser
+  confirmInstall
+
+  installationloop
+
+  # End installation
+  finalize
 }
 
 function full_setup() {
@@ -1142,9 +1055,8 @@ function full_setup() {
   configFiles
   configDefaultHomeDirectories
   configXDGBaseDirectory
-  installationloop
   configUser
-  installUserSpecificPackages
+  installationloop
   cloneConfigFiles
   makeUserJS
 
@@ -1174,33 +1086,22 @@ function _main() {
   # region: Options logic (Define options logic here)
   cd "${scriptDir}" || exit 1
   local option
-  declare debug=0
-  declare debugDir
+  progsfile="${scriptDir}/data/packages/.json"
   while [[ "${#}" -gt 0 ]]; do
     case "${1:-}" in
       -s | --setup)
         shift
-        if [[ ! "${1:-}" =~ ^(f|full)$ ]]; then
+        if [[ ! "${1:-}" =~ ^(f|full|p|programs|s|system)$ ]]; then
           error "${msgInvalid} \"${1:-}\"\n${msgTryHelp}"
         fi
         option="${1}"
         ;;
-      -d | --debug)
-        debugDir="$(pwd)"/.debug
-        [[ -n "${debugDir}" && -d "${debugDir}" ]] && rm --force --recursive -- "${debugDir}" >&3
-        mkdir --verbose "${debugDir}" \
-          "${debugDir}"/bin \
-          "${debugDir}"/boot \
-          "${debugDir}"/boot/grub \
-          "${debugDir}"/boot/loader \
-          "${debugDir}"/boot/loader/entries \
-          "${debugDir}"/etc \
-          "${debugDir}"/etc/default \
-          "${debugDir}"/etc/skel \
-          "${debugDir}"/etc/sudoers.d \
-          "${debugDir}"/home \
-          "${debugDir}"/tmp >&3
-        debug=1
+      -p | --programs-file)
+        shift
+        if [[ ! -f "${1}" ]]; then
+          error "${msgInvalid} \"${1:-}\"\n${msgTryHelp}"
+        fi
+        progsfile="${1}"
         ;;
       *)
         error "${msgInvalid} \"${1:-}\". ${msgTryHelp}"
@@ -1210,20 +1111,21 @@ function _main() {
   done
   # regionend
 
-  if [[ "${debug}" == 1 ]]; then
-    if [[ "$(id -u)" -eq 0 && -n "${SUDO_USER}" ]]; then
-      error "When debugger mode is enabled, you cannot run this script using sudo."
-    fi
-    checkDependencies libnewt git unzip curl --critical
-  else
-    # Install dependencies.
-    pacman --noconfirm --needed --sync --refresh libnewt git unzip curl \
-      || error "Please ensure you are running this script as the root user, on an Arch-based distribution, and have an active internet connection."
-  fi
+  # Install dependencies.
+  pacman --noconfirm --needed --sync --refresh jq libnewt git unzip curl \
+    || error "Please ensure you are running this script as the root user, on an Arch-based distribution, and have an active internet connection."
 
   # region: Script logic (Define script logic here)
   if [[ "${option}" =~ ^(f|full)$ ]]; then
     full_setup
+  fi
+
+  if [[ "${option}" =~ ^(p|programs)$ ]]; then
+    programs_setup
+  fi
+
+  if [[ "${option}" =~ ^(s|system)$ ]]; then
+    system_setup
   fi
   # regionend
 }
