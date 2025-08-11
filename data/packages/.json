@@ -7,6 +7,12 @@
   },
   {
     "type": "pacman",
+    "purpose": "Provide scheduled program execution and related tools",
+    "conflicts": [],
+    "packages": ["cronie"]
+  },
+  {
+    "type": "pacman",
     "purpose": "Provide interactive terminal dialogs",
     "conflicts": [],
     "packages": ["dialog", "libnewt"]
@@ -75,7 +81,12 @@
     "type": "pacman",
     "purpose": "Enable emoji and Japanese font rendering",
     "conflicts": [],
-    "packages": ["noto-fonts-emoji", "otf-ipafont"]
+    "packages": [
+      "noto-fonts",
+      "noto-fonts-emoji",
+      "ttf-liberation",
+      "otf-ipafont"
+    ]
   },
   {
     "type": "pacman",
@@ -236,7 +247,7 @@
     "type": "pacman",
     "purpose": "Provide Python 3 programming environment",
     "conflicts": [],
-    "packages": ["python3", "python-pip"]
+    "packages": ["python", "python-pip"]
   },
   {
     "type": "pacman",
@@ -379,6 +390,7 @@
       "seahorse",
       "nm-connection-editor",
       "network-manager-applet",
+      "waybar",
       "dunst",
       "rofi",
       "rofi-emoji",
