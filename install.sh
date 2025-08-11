@@ -498,11 +498,11 @@ function refreshKeys() {
 }
 function removePackage() {
   IFS=' ' read -r -a pkg_array <<< "${1}"
-  pacman --remove -dd "${pkg_array[@]}" 1>&3 || echo "Conflicting package(s) not installed"
+  pacman --noconfirm --remove -dd "${pkg_array[@]}" >&3 || echo "Conflicting package(s) not installed"
 }
 function installPackage() {
   IFS=' ' read -r -a pkg_array <<< "${1}"
-  pacman --noconfirm --disable-download-timeout --needed --sync "${pkg_array[@]}" 1>&3
+  pacman --noconfirm --disable-download-timeout --needed --sync "${pkg_array[@]}" >&3
 }
 function maininstall() {
   local max_len=30
@@ -524,11 +524,13 @@ function gitcloneinstall() {
   {
     echo $((n * 100 / total))
   } | whiptail --title "Installation in progress..." --gauge "Installing \"${url}\" (${n} of ${total}).\n\n${2}" 10 80 0
-  if [[ -d "/home/${username:?}/${toPath:?}" ]]; then
-    rm -rf "/home/${username:?}/${toPath:?}"
-  fi
-  su - "${username}" -c "git clone https://github.com/${url}.git /home/${username}/${toPath}" >&3
 
+  sudo -u "${username}" bash -lc '
+    set -euo pipefail
+
+    [ -d "${HOME}/'"${toPath:?}"'" ] && rm -rf "${HOME}/'"${toPath:?}"'"
+    git clone https://github.com/'"${url}"'.git "${HOME}"/'"${toPath}"' > /dev/null
+  '
 }
 function nerdfontinstall() {
   local fonts="${1}"
@@ -536,8 +538,10 @@ function nerdfontinstall() {
   local fontsDir="/home/${username}/.local/share/fonts"
   local font_array
   IFS=' ' read -r -a font_array <<< "${fonts}"
-  [[ -d "${fontsDir}" ]] || mkdir --parents --verbose "${fontsDir}" >&3 && chown -R "${username}:${username}" "${fontsDir}" >&3
-
+  if [[ ! -d "${fontsDir}" ]]; then
+    mkdir --parents --verbose "${fontsDir}" >&3
+    chown -R "${username}:${username}" "${fontsDir}" >&3
+  fi
   local version
   for font in "${font_array[@]}"; do
     {
@@ -553,17 +557,26 @@ function nerdfontinstall() {
       | sed 's/"//g')
     curl --location https://github.com/ryanoasis/nerd-fonts/releases/download/"${version}"/"${font:?}".zip --output "${scriptTempDir:?}"/"${font:?}".zip >&3
     mkdir --verbose --parents "${fontsDir:?}"/"${font:?}" >&3
-    unzip -o "${scriptTempDir:?}"/"${font:?}".zip -d "${fontsDir:?}"/"${font:?}"/ #>&3
-    chown -R "${username}:${username}" "${fontsDir:?}"/"${font:?}"
+    unzip -o "${scriptTempDir:?}"/"${font:?}".zip -d "${fontsDir:?}"/"${font:?}" >&3
+    chown -R "${username}:${username}" "${fontsDir:?}"/"${font:?}" >&3
   done
   fc-cache --really-force >&3
 }
 function postInstallationLoop() {
-  whiptail --title "Enabling services (libvirtd, sshd and ufw)..." 10 80 0
-  systemctl enable libvirtd.service >&3 # Enable Libvirtd ("Virtualization")
-  systemctl enable sshd.service >&3     # Enable openssh Service
-  systemctl enable ufw.service >&3      # Enable firewall Service
-  ufw enable >&3                        # Enable firewall
+  whiptail --title "Enabling services..." 10 80 0
+  if pacman -Qq libvirt >&3; then
+    systemctl enable libvirtd.service >&3
+  fi
+  if pacman -Qq cronie >&3; then
+    systemctl enable cronie.service >&3
+  fi
+  if pacman -Qq openssh >&3; then
+    systemctl enable sshd.service >&3
+  fi
+  if command -v ufw >&3 && pacman -Qq ufw >&3; then
+    systemctl enable ufw.service >&3
+    ufw enable >&3
+  fi
 }
 function installationloop() {
   local total
@@ -971,20 +984,25 @@ function makeUserJS() {
     local upstreamUserJS="${pdir}/custom_user.js"
     local userjs="${pdir}/user.js"
     [[ ! -f "${upstreamUserJS}" ]] && curl -sL "${upstreamUserJSURL}" > "${upstreamUserJS}"
-    [[ -f "${upstreamUserJS}" ]] && rm "${userjs}"
+    [[ -f "${userjs}" ]] && rm "${userjs}"
     cat "${upstreamUserJS}" > "${userjs}"
-    chown "${username}:wheel" "${upstreamUserJS}" "${userjs}"
-    pkill -u "${username}" firefox || echo "Firefox not running..."
+    chown "${username}:${username}" "${upstreamUserJS}" "${userjs}" >&3
+    pkill -u "${username}" firefox >&3 || true
   fi
 }
 
 function cloneConfigFiles() {
   whiptail --title "Installation in progress..." --infobox "Configuring dotfiles..." 10 80
-  [[ -d /home/"${username}"/.local/share/BLAST/dotfiles ]] && rm -rf /home/"${username}"/.local/share/BLAST/dotfiles
-  git clone --bare https://github.com/gabrielgnsilva/dotfiles -b dev /home/"${username}"/.local/share/BLAST/dotfiles
-  git --git-dir=/home/"${username}"/.local/share/BLAST/dotfiles --work-tree=/home/"${username}" checkout -f
-  sed --expression "s/CURRENTUSERNAME/${username}/g" \
-    --in-place /home/"${username}"/.config/gtk-3.0/bookmarks
+  sudo -u "${username}" bash -lc '
+    set -euo pipefail
+
+    [ -d "${HOME}"/.local/share/BLAST/dotfiles ] && rm -rf "${HOME}"/.local/share/BLAST/dotfiles
+    mkdir --parents "${HOME}"/.local/share/BLAST/dotfiles > /dev/null
+    git clone --bare https://github.com/gabrielgnsilva/dotfiles -b dev "${HOME}"/.local/share/BLAST/dotfiles > /dev/null
+    git --git-dir="${HOME}"/.local/share/BLAST/dotfiles --work-tree="${HOME}" checkout -f > /dev/null
+    sed --expression "s/CURRENTUSERNAME/'"${username}"'/g" \
+      --in-place "${HOME}"/.config/gtk-3.0/bookmarks
+  '
 }
 
 function system_setup() {
