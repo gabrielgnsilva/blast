@@ -421,11 +421,5 @@
     "type": "nerdfont",
     "purpose": "Provide nerd fonts",
     "fonts": ["Hack", "CascadiaCode", "FiraCode", "JetBrainsMono"]
-  },
-  {
-    "type": "github",
-    "purpose": "Provide Tmux Plugin Manager",
-    "repo": "tmux-plugins/tpm",
-    "dir": ".config/tmux/plugins/tpm"
   }
 ]
