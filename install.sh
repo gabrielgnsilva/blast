@@ -806,24 +806,7 @@ function configLocale() {
 
   locale-gen >&3
 
-  {
-    printf "LANG=en_US.UTF-8\n"
-    printf "LANGUAGE=en_US:en:C\n"
-    printf "LC_ADDRESS=en_US\n"
-    printf "LC_COLLATE=en_US\n"
-    printf "LC_CTYPE=en_US\n"
-    printf "LC_IDENTIFICATION=en_US\n"
-    printf "LC_MEASUREMENT=en_US\n"
-    printf "LC_MESSAGES=en_US\n"
-    printf "LC_MONETARY=en_US\n"
-    printf "LC_NAME=en_US\n"
-    printf "LC_NUMERIC=en_US\n"
-    printf "LC_PAPER=en_US\n"
-    printf "LC_SOURCED=en_US\n"
-    printf "LC_TELEPHONE=en_US\n"
-    printf "LC_TIME=en_US\n"
-    printf "LC_ALL="
-  } | tee /etc/locale.conf >&3
+  printf "LANG=en_US.UTF-8" | tee /etc/locale.conf >&3
 }
 function configKeyboardLayout() {
   whiptail --title "Installation in progress..." --infobox "Configuring console keyboard..." 10 80
