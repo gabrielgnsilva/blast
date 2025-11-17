@@ -1,0 +1,383 @@
+[
+  {
+    "type": "pacman",
+    "purpose": "Provide System tools and Utilities",
+    "conflicts": [],
+    "packages": [
+      "bottom",
+      "btop",
+      "cronie",
+      "curl",
+      "dialog",
+      "dosfstools",
+      "entr",
+      "i2c-tools",
+      "less",
+      "libnewt",
+      "lm_sensors",
+      "make",
+      "man-db",
+      "man-pages",
+      "mtools",
+      "p7zip",
+      "unzip",
+      "wget",
+      "zip",
+      "figlet",
+      "zoxide"
+    ]
+  },
+  {
+    "type": "pacman",
+    "purpose": "Provide XDG functionalities",
+    "conflicts": [],
+    "packages": [
+      "xdg-user-dirs",
+      "xdg-utils"
+    ]
+  },
+  {
+    "type": "pacman",
+    "purpose": "Provide X resources database management",
+    "conflicts": [],
+    "packages": [
+      "xorg-xrdb"
+    ]
+  },
+  {
+    "type": "pacman",
+    "purpose": "Provide font management and some commonly used fonts",
+    "conflicts": [],
+    "packages": [
+      "fontconfig",
+      "lib32-fontconfig",
+      "noto-fonts",
+      "noto-fonts-emoji",
+      "otf-ipafont",
+      "ttf-liberation"
+    ]
+  },
+  {
+    "type": "pacman",
+    "purpose": "Provide AMD GPU Drivers",
+    "conflicts": [],
+    "packages": [
+      "mesa",
+      "lib32-mesa",
+      "xf86-video-amdgpu",
+      "vulkan-radeon",
+      "lib32-vulkan-radeon",
+      "libva-mesa-driver",
+      "lib32-libva-mesa-driver",
+      "mesa-vdpau",
+      "lib32-mesa-vdpau"
+    ]
+  },
+  {
+    "type": "pacman",
+    "purpose": "Provide complete audio setup (PipeWire + WirePlumber, and audio backends)",
+    "conflicts": [],
+    "packages": [
+      "pipewire",
+      "lib32-pipewire",
+      "pipewire-audio",
+      "pipewire-pulse",
+      "pipewire-alsa",
+      "pipewire-jack",
+      "lib32-pipewire-jack",
+      "wireplumber",
+      "pamixer",
+      "pulsemixer",
+      "ladspa",
+      "noise-suppression-for-voice",
+      "qpwgraph"
+    ]
+  },
+  {
+    "type": "pacman",
+    "purpose": "Provide terminal emulation and shell enhancements",
+    "conflicts": [],
+    "packages": [
+      "wezterm",
+      "tmux",
+      "zsh",
+      "zsh-syntax-highlighting",
+      "zsh-completions",
+      "zsh-autosuggestions"
+    ]
+  },
+  {
+    "type": "pacman",
+    "purpose": "Provide advanced text editing",
+    "conflicts": [],
+    "packages": [
+      "fd",
+      "fzf",
+      "ripgrep",
+      "tree-sitter",
+      "shellcheck",
+      "silicon",
+      "neovim",
+      "lnav"
+    ]
+  },
+  {
+    "type": "pacman",
+    "purpose": "Provide C and C++ compilation tools",
+    "conflicts": [],
+    "packages": [
+      "gcc",
+      "clang"
+    ]
+  },
+  {
+    "type": "pacman",
+    "purpose": "Provide Go programming environment",
+    "conflicts": [],
+    "packages": [
+      "go"
+    ]
+  },
+  {
+    "type": "pacman",
+    "purpose": "Provide JSON parsing and manipulation",
+    "conflicts": [],
+    "packages": [
+      "jq"
+    ]
+  },
+  {
+    "type": "pacman",
+    "purpose": "Provide Node.js environment and package managers",
+    "conflicts": [],
+    "packages": [
+      "nvm",
+      "pnpm"
+    ]
+  },
+  {
+    "type": "pacman",
+    "purpose": "Provide Julia programming environment",
+    "conflicts": [],
+    "packages": [
+      "julia"
+    ]
+  },
+  {
+    "type": "pacman",
+    "purpose": "Provide PHP runtime environment",
+    "conflicts": [],
+    "packages": [
+      "php",
+      "composer"
+    ]
+  },
+  {
+    "type": "pacman",
+    "purpose": "Provide Python 3 programming environment",
+    "conflicts": [],
+    "packages": [
+      "python",
+      "python-pip"
+    ]
+  },
+  {
+    "type": "pacman",
+    "purpose": "Provide Rust programming environment",
+    "conflicts": [],
+    "packages": [
+      "rustup",
+      "cargo"
+    ]
+  },
+  {
+    "type": "pacman",
+    "purpose": "Provide Ruby programming environment ",
+    "conflicts": [],
+    "packages": [
+      "ruby",
+      "rubygems"
+    ]
+  },
+  {
+    "type": "pacman",
+    "purpose": "Provide office suite functionality",
+    "conflicts": [],
+    "packages": [
+      "joplin",
+      "libreoffice",
+      "zathura",
+      "zathura-pdf-poppler"
+    ]
+  },
+  {
+    "type": "pacman",
+    "purpose": "Provide Graphics & Reading apps",
+    "conflicts": [],
+    "packages": [
+      "gimp",
+      "inkscape",
+      "nsxiv"
+    ]
+  },
+  {
+    "type": "pacman",
+    "purpose": "Provide sound & video apps",
+    "conflicts": [],
+    "packages": [
+      "audacity",
+      "kdenlive",
+      "obs-studio",
+      "vlc"
+    ]
+  },
+  {
+    "type": "pacman",
+    "purpose": "Provide remote desktop access",
+    "conflicts": [],
+    "packages": [
+      "remmina"
+    ]
+  },
+  {
+    "type": "pacman",
+    "purpose": "Provide password management",
+    "conflicts": [],
+    "packages": [
+      "keepassxc"
+    ]
+  },
+  {
+    "type": "pacman",
+    "purpose": "Provide Peer-to-Peer downloading",
+    "conflicts": [],
+    "packages": [
+      "qbittorrent"
+    ]
+  },
+  {
+    "type": "pacman",
+    "purpose": "Provide web browser",
+    "conflicts": [],
+    "packages": [
+      "vivaldi",
+      "firefox",
+      "geckodriver"
+    ]
+  },
+  {
+    "type": "pacman",
+    "purpose": "Provide GUI-based virtualization management",
+    "conflicts": [
+      "iptables"
+    ],
+    "packages": [
+      "qemu-desktop",
+      "qemu",
+      "libvirt",
+      "dnsmasq",
+      "openbsd-netcat",
+      "dmidecode",
+      "iptables-nft",
+      "edk2-ovmf",
+      "swtpm",
+      "bridge-utils",
+      "virt-manager"
+    ]
+  },
+  {
+    "type": "pacman",
+    "purpose": "Provide complete LaTeX toolchain (English only)",
+    "conflicts": [],
+    "packages": [
+      "dvisvgm",
+      "ghostscript",
+      "ijs",
+      "woff2",
+      "perl",
+      "perl-yaml-tiny",
+      "perl-file-homedir",
+      "texlive-basic",
+      "texlive-bin",
+      "texlive-latex",
+      "texlive-latexrecommended",
+      "texlive-bibtexextra",
+      "texlive-binextra",
+      "texlive-fontsextra",
+      "texlive-fontutils",
+      "texlive-fontsrecommended",
+      "texlive-formatsextra",
+      "texlive-latexextra",
+      "texlive-lang",
+      "texlive-mathscience",
+      "texlive-pictures",
+      "biber"
+    ]
+  },
+  {
+    "type": "pacman",
+    "purpose": "Provide Hyprland-based Wayland environment with utilities and enhancements",
+    "conflicts": [],
+    "packages": [
+      "hyprland",
+      "qt5ct",
+      "qt6ct",
+      "qt5-wayland",
+      "qt6-wayland",
+      "xdg-desktop-portal",
+      "xdg-desktop-portal-gnome",
+      "xdg-desktop-portal-hyprland",
+      "hyprcursor",
+      "hypridle",
+      "hyprlock",
+      "hyprpaper",
+      "hyprpicker",
+      "hyprsunset",
+      "polkit",
+      "hyprpolkitagent",
+      "gnome-keyring",
+      "libsecret",
+      "libgnome-keyring",
+      "seahorse",
+      "nm-connection-editor",
+      "network-manager-applet",
+      "cava",
+      "waybar",
+      "mako",
+      "rofi",
+      "rofi-emoji",
+      "wl-clipboard",
+      "cliphist",
+      "wtype",
+      "udisks2",
+      "udiskie",
+      "slurp",
+      "grim",
+      "satty",
+      "engrampa",
+      "thunar",
+      "gvfs",
+      "thunar-archive-plugin",
+      "thunar-media-tags-plugin",
+      "ffmpegthumbnailer",
+      "tumbler",
+      "libgsf",
+      "gtk3",
+      "gnome-themes-extra",
+      "papirus-icon-theme",
+      "capitaine-cursors",
+      "slock",
+      "ufw"
+    ]
+  },
+  {
+    "type": "nerdfont",
+    "purpose": "Provide nerd fonts",
+    "fonts": [
+      "Hack",
+      "CascadiaCode",
+      "FiraCode",
+      "JetBrainsMono"
+    ]
+  }
+]

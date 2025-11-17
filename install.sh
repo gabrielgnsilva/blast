@@ -189,7 +189,7 @@ function _initLogger() {
         valuesToRemove=("-l" "--log-file" "${filePath}")
         for element in "${scriptParams[@]}"; do
           # Check if the element is in the list of values to remove
-          if [[ ! "${valuesToRemove[*]}" == *"${element}"* ]]; then
+          if [[ "${valuesToRemove[*]}" != *"${element}"* ]]; then
             filteredParams+=("${element}")
           fi
         done
@@ -897,8 +897,10 @@ function configXDGBaseDirectory() {
   whiptail --title "Installation in progress..." --infobox "Configuring XDGBaseDir..." 10 80
 
   {
-    printf "\n# Default Editor\n"
-    printf "EDITOR=nvim\n"
+    printf "#!/usr/bin/env sh\n"
+    printf "\n"
+    printf "# Default Editor\n"
+    printf "export EDITOR=nvim\n"
     printf "\n"
     printf "# XDG Base Directory\n"
     printf "export XDG_CONFIG_HOME=\"\${HOME}\"/.config\n"
@@ -1087,7 +1089,7 @@ function _main() {
   # region: Options logic (Define options logic here)
   cd "${scriptDir}" || exit 1
   local option
-  progsfile="${scriptDir}/data/packages/.json"
+  progsfile="${scriptDir}/data/packages.json"
   while [[ "${#}" -gt 0 ]]; do
     case "${1:-}" in
       -s | --setup)
