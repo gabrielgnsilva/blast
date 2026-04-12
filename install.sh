@@ -657,9 +657,8 @@ function configHostname() {
     printf "DEPLOYMENT=production\n"
   } | tee /etc/machine-info >&3
 
-  pacman --sync --needed networkmanager dhcpcd openssh wpa_supplicant --noconfirm >&3
+  pacman --sync --needed networkmanager openssh wpa_supplicant --noconfirm >&3
   systemctl enable NetworkManager.service >&3
-  systemctl enable dhcpcd.service >&3
 }
 
 function obtainBootLoader() {
