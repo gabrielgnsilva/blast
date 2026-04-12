@@ -1115,7 +1115,7 @@ function _main() {
   # regionend
 
   # Install dependencies.
-  pacman --noconfirm --needed --sync --refresh jq libnewt git unzip curl \
+  pacman --noconfirm --needed --sync --refresh sudo jq libnewt git unzip curl \
     || error "Please ensure you are running this script as the root user, on an Arch-based distribution, and have an active internet connection."
 
   # region: Script logic (Define script logic here)
