@@ -1077,6 +1077,7 @@ function configUser() {
 function cloneConfigFiles() {
   whiptail --title "Installation in progress..." --infobox "Configuring dotfiles..." 10 80
   sudo -u "${username}" bash -lc '
+  runuser -u "${username}" -- bash -lc '
     set -euo pipefail
 
     [ -d "${HOME}"/.local/share/BLAST/dotfiles ] && rm -rf "${HOME}"/.local/share/BLAST/dotfiles
