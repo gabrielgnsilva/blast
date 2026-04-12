@@ -678,7 +678,7 @@ function obtainBootLoader() {
   ) || exit 1
 
   mapfile -t disks < <(lsblk -dpno NAME,TYPE | awk '$2 == "disk" { print $1 }')
-  [[ ${#disks[@]} -eq 0 ]] && abort "Nenhum disco encontrado."
+  [[ ${#disks[@]} -eq 0 ]] && abortInstallation "Nenhum disco encontrado."
 
   for d in "${disks[@]}"; do
     disk_menu+=("${d}" "")
