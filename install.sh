@@ -786,7 +786,6 @@ function configBootloader() {
     sed --expression 's/GRUB_TIMEOUT=5/GRUB_TIMEOUT=0/g' \
       --in-place /etc/default/grub >&3
     grub-mkconfig -o /boot/grub/grub.cfg >&3
-    systemctl enable systemd-boot-update.service >&3
   fi
 }
 function check_mkinitcipio_hooks() {
