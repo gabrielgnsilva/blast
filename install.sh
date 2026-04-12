@@ -576,6 +576,7 @@ function postInstallationLoop() {
   if command -v ufw >&3 && pacman -Qq ufw >&3; then
     systemctl enable ufw.service >&3
     pacman -Qq openssh >&3 && ufw allow ssh >&3
+    ufw --force enable >&3
   fi
 }
 function installationloop() {
