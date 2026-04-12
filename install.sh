@@ -585,6 +585,11 @@ function installationloop() {
   local total
 
   total=$(jq length "${progsfile}")
+  if [[ "${total}" -eq 0 ]]; then
+    whiptail --title "Installation in progress..." --infobox "No programs to install. Skipping installation loop..." 10 80
+    return
+  fi
+
   n=0
   jq -c '.[]' "${progsfile}" | while read -r obj; do
     n=$((n + 1))
