@@ -1028,6 +1028,7 @@ function programs_setup() {
   confirmInstall
 
   installationloop
+  postInstallationLoop
 
   # End installation
   finalize
@@ -1060,6 +1061,7 @@ function full_setup() {
   configXDGBaseDirectory
   configUser
   installationloop
+  postInstallationLoop
   cloneConfigFiles
   makeUserJS
 
