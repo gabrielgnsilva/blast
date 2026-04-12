@@ -532,6 +532,65 @@ function gitcloneinstall() {
     git clone https://github.com/'"${url}"'.git "${HOME}"/'"${toPath}"' > /dev/null
   '
 }
+function getPinnedNerdFontsVersion() {
+  local file="${scriptDir}/.nerd_font/version"
+  if [[ ! -f "${file}" ]]; then
+    abortInstallation "Missing pinned Nerd Fonts version file: ${file}"
+  fi
+  local version
+  version="$(tr -d '\r\n' < "${file}")"
+  version="${version//[[:space:]]/}"
+  if [[ -z "${version}" || "${version}" =~ [^a-zA-Z0-9._-] ]]; then
+    abortInstallation "Invalid pinned Nerd Fonts version in ${file}."
+  fi
+  printf '%s' "${version}"
+}
+function getPinnedNerdFontsChecksumsFile() {
+  local f1="${scriptDir}/.nerd_font/sha256"
+  if [[ -f "${f1}" ]]; then
+    printf '%s' "${f1}"
+    return
+  fi
+  abortInstallation "Missing pinned Nerd Fonts checksums file (.nerd_font/sha256 or .nerd_font/sha256)."
+}
+function _getExpectedSHA256() {
+  local checksumsFile="${1}"
+  local filename="${2}"
+  # Format: <sha256><spaces><filename>
+  awk -v fn="${filename}" '
+    {
+      # Handle CRLF files and optional leading "*" (binary mode output)
+      f = $NF
+      gsub(/\r$/, "", f)
+      sub(/^\*/, "", f)
+      sub(/^\.\//, "", f)
+      if (f == fn) { print $1; exit 0 }
+    }
+  ' "${checksumsFile}"
+}
+function verifySHA256Checksum() {
+  local filePath="${1}"
+  local checksumsFile="${2}"
+
+  if ! command -v sha256sum > /dev/null 2>&1; then
+    abortInstallation "Missing dependency: sha256sum (coreutils)."
+  fi
+
+  local filename
+  filename="$(basename "${filePath}")"
+
+  local expected
+  expected="$(_getExpectedSHA256 "${checksumsFile}" "${filename}")"
+  if [[ -z "${expected}" ]]; then
+    abortInstallation "Nerd Fonts checksum for '${filename}' was not found in '${checksumsFile}'."
+  fi
+
+  local actual
+  actual="$(sha256sum "${filePath}" | awk '{ print $1 }')"
+  if [[ "${actual}" != "${expected}" ]]; then
+    abortInstallation "Checksum mismatch for '${filename}'.\n\nExpected: ${expected}\nActual:   ${actual}\n\nAborting to prevent installing a potentially tampered download."
+  fi
+}
 function nerdfontinstall() {
   local fonts="${1}"
   local purpose="${2}"
@@ -543,21 +602,33 @@ function nerdfontinstall() {
     chown -R "${username}:${username}" "${fontsDir}" >&3
   fi
   local version
+  version="$(getPinnedNerdFontsVersion)"
+
+  local checksumsFile
+  checksumsFile="$(getPinnedNerdFontsChecksumsFile)"
+
   for font in "${font_array[@]}"; do
+    if [[ -z "${font}" || "${font}" =~ [[:cntrl:]] || ! "${font}" =~ ^[a-zA-Z0-9][a-zA-Z0-9._+-]*$ ]]; then
+      abortInstallation "Invalid Nerd Font name: '${font}'"
+    fi
+    if [[ "${font}" == '.' || "${font}" == '..' || "${font}" == .* ]]; then
+      abortInstallation "Invalid Nerd Font name: '${font}'"
+    fi
     {
       echo $((n * 100 / total))
     } | whiptail --title "Installation in progress..." --gauge "Installing \"${font}\" (${n} of ${total}).\n\n${purpose}" 10 80 0
     if [[ -d "${fontsDir:?}"/"${font:?}" ]]; then
       rm --force --recursive --verbose "${fontsDir:?}"/"${font:?}" >&3
     fi
-    version=$(curl -s https://api.github.com/repos/ryanoasis/nerd-fonts/releases/latest \
-      | grep "tag_name" \
-      | awk '{ print $2 }' \
-      | sed 's/,$//' \
-      | sed 's/"//g')
-    curl --location https://github.com/ryanoasis/nerd-fonts/releases/download/"${version}"/"${font:?}".zip --output "${scriptTempDir:?}"/"${font:?}".zip >&3
+    local zipPath="${scriptTempDir:?}/${font:?}.zip"
+    curl --fail --location --silent --show-error \
+      --output "${zipPath}" \
+      "https://github.com/ryanoasis/nerd-fonts/releases/download/${version}/${font:?}.zip" >&3
+
+    verifySHA256Checksum "${zipPath}" "${checksumsFile}"
+
     mkdir --verbose --parents "${fontsDir:?}"/"${font:?}" >&3
-    unzip -o "${scriptTempDir:?}"/"${font:?}".zip -d "${fontsDir:?}"/"${font:?}" >&3
+    unzip -o "${zipPath}" -d "${fontsDir:?}"/"${font:?}" >&3
     chown -R "${username}:${username}" "${fontsDir:?}"/"${font:?}" >&3
   done
   fc-cache --really-force >&3
