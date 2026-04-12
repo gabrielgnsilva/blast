@@ -620,7 +620,8 @@ function configTimezone() {
   whiptail --title "Installation in progress..." --infobox "Configuring timezone..." 10 80
   ln --symbolic --force --verbose \
     /usr/share/zoneinfo/"${timezone}" \
-    /etc/timezone >&3
+    /etc/localtime >&3
+  printf "%s\n" "${timezone}" | tee /etc/timezone >&3
   hwclock --systohc --verbose >&3
 }
 
