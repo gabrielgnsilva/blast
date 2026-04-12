@@ -1069,6 +1069,8 @@ function configUser() {
     }
   fi
 
+  printf '%s:%s\n' "${username}" "${password1}" | chpasswd --crypt-method SHA512
+
   unset password1 password2
 }
 
