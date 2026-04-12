@@ -827,7 +827,17 @@ function configPackageManager() {
     --expression 's/#VerbosePkgLists/VerbosePkgLists/g' \
     --expression 's/#UseSyslog/UseSyslog/g' \
     --in-place=.bak /etc/pacman.conf >&3
-  sed -i "/VerbosePkgLists/a ILoveCandy" /etc/pacman.conf >&3
+
+  if ! grep -q -E '^\s*ILoveCandy\s*$' /etc/pacman.conf; then
+    if grep -q -E '^\s*VerbosePkgLists\s*$' /etc/pacman.conf; then
+      sed -i "/^\s*VerbosePkgLists\s*$/a ILoveCandy" /etc/pacman.conf >&3
+    elif grep -q -E '^\s*#\s*VerbosePkgLists\s*$' /etc/pacman.conf; then
+      sed -i "/^\s*#\s*VerbosePkgLists\s*$/a ILoveCandy" /etc/pacman.conf >&3
+    else
+      printf "\nILoveCandy\n" | tee --append /etc/pacman.conf >&3
+    fi
+  fi
+
   if [[ -n "${multilib}" ]]; then
     sed --expression "${multilib}s/^#//g" \
       --expression "$((multilib + 1))s/^#//g" \
