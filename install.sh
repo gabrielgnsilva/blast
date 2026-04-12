@@ -951,30 +951,6 @@ function configUser() {
 
   unset password1 password2
 }
-function makeUserJS() {
-  whiptail --title "Installation in progress..." --infobox "Setting browser privacy settings and add-ons..." 10 80
-
-  local upstreamUserJSURL='https://raw.githubusercontent.com/yokoffing/Betterfox/refs/heads/main/user.js'
-  local browserDir="/home/${username}/.mozilla/firefox"
-  local profilesINI="${browserDir}/profiles.ini"
-
-  # Start firefox headless so it generates a profile. Then get that profile in a variable.
-  sudo -u "${username}" firefox --headless >&3 &
-  sleep 15 # Wait... takes a long time before firefox inicialize the default profile
-  local profile
-  profile="$(sed -n "/Default=.*.default-.*/ s/.*=//p" "${profilesINI}")"
-  local pdir="${browserDir}/${profile}"
-  if [[ -d "${pdir}" ]]; then
-    # Get the user.js and prepare it.
-    local upstreamUserJS="${pdir}/custom_user.js"
-    local userjs="${pdir}/user.js"
-    [[ ! -f "${upstreamUserJS}" ]] && curl -sL "${upstreamUserJSURL}" > "${upstreamUserJS}"
-    [[ -f "${userjs}" ]] && rm "${userjs}"
-    cat "${upstreamUserJS}" > "${userjs}"
-    chown "${username}:${username}" "${upstreamUserJS}" "${userjs}" >&3
-    pkill -u "${username}" firefox >&3 || true
-  fi
-}
 
 function cloneConfigFiles() {
   whiptail --title "Installation in progress..." --infobox "Configuring dotfiles..." 10 80
@@ -1063,7 +1039,6 @@ function full_setup() {
   installationloop
   postInstallationLoop
   cloneConfigFiles
-  makeUserJS
 
   # End installation
   finalize
