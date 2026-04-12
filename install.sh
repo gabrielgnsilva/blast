@@ -885,7 +885,6 @@ function configDefaultHomeDirectories() {
     /etc/skel/Pictures/Wallpapers \
     /etc/skel/Projects \
     /etc/skel/Public \
-    /etc/skel/Repositories \
     /etc/skel/Templates \
     /etc/skel/Videos \
     /etc/skel/Virtual\ Machines \
