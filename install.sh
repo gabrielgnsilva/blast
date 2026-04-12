@@ -532,6 +532,56 @@ function gitcloneinstall() {
     git clone https://github.com/'"${url}"'.git "${HOME}"/'"${toPath}"' > /dev/null
   '
 }
+
+function _getUserHomeDir() {
+  local user="${1}"
+  local entry homeDir homeReal
+
+  entry="$(getent passwd -- "${user}")" || {
+    abortInstallation "User '${user}' was not found in passwd/NSS."
+  }
+
+  IFS=: read -r _ _ _ _ _ homeDir _ <<< "${entry}"
+
+  if [[ -z "${homeDir}" || "${homeDir}" != /* ]]; then
+    abortInstallation "Could not determine a valid home directory for user '${user}'."
+  fi
+
+  homeReal="$(realpath -m -- "${homeDir}")"
+
+  printf '%s\n' "${homeReal}"
+}
+function _resolvePathUnderHome() {
+  local user="${1}"
+  local relPath="${2}"
+  local context="${3}"
+
+  if [[ -z "${relPath}" || "${relPath}" =~ [[:cntrl:]] ]]; then
+    abortInstallation "Invalid ${context} path."
+  fi
+
+  # Normalize common relative prefix.
+  relPath="${relPath#./}"
+  if [[ -z "${relPath}" ]]; then
+    abortInstallation "Invalid ${context} path."
+  fi
+  if [[ "${relPath}" == /* ]]; then
+    abortInstallation "Invalid ${context} path (absolute paths are not allowed): '${relPath}'"
+  fi
+  # Disallow '.' segments to avoid dangerous targets like '$HOME/.'
+  if [[ "${relPath}" == '.' || "${relPath}" == ./* || "${relPath}" == */./* || "${relPath}" == */. ]]; then
+    abortInstallation "Invalid ${context} path (dot segments are not allowed): '${relPath}'"
+  fi
+  if [[ "${relPath}" == .. || "${relPath}" == ../* || "${relPath}" == */../* || "${relPath}" == */.. ]]; then
+    abortInstallation "Invalid ${context} path (path traversal is not allowed): '${relPath}'"
+  fi
+
+  local homeDir targetDir
+  homeDir="$(_getUserHomeDir "${user}")"
+  targetDir="${homeDir%/}/${relPath}"
+  printf '%s' "${targetDir}"
+}
+
 function getPinnedNerdFontsVersion() {
   local file="${scriptDir}/.nerd_font/version"
   if [[ ! -f "${file}" ]]; then
@@ -594,7 +644,9 @@ function verifySHA256Checksum() {
 function nerdfontinstall() {
   local fonts="${1}"
   local purpose="${2}"
-  local fontsDir="/home/${username}/.local/share/fonts"
+  local homeDir
+  homeDir="$(_getUserHomeDir "${username}")"
+  local fontsDir="${homeDir}/.local/share/fonts"
   local font_array
   IFS=' ' read -r -a font_array <<< "${fonts}"
   if [[ ! -d "${fontsDir}" ]]; then
@@ -1076,17 +1128,35 @@ function configUser() {
 
 function cloneConfigFiles() {
   whiptail --title "Installation in progress..." --infobox "Configuring dotfiles..." 10 80
-  sudo -u "${username}" bash -lc '
+  local homeDir
+  homeDir="$(_getUserHomeDir "${username}")"
+
+  local dotfilesDir
+  dotfilesDir="$(_resolvePathUnderHome "${username}" ".local/share/BLAST/dotfiles" "dotfiles")"
+  if [[ -e "${dotfilesDir}" && -L "${dotfilesDir}" ]]; then
+    abortInstallation "Refusing to remove: dotfiles dir is a symlink (${dotfilesDir})."
+  fi
+
   runuser -u "${username}" -- bash -lc '
     set -euo pipefail
+    homeDir="${1}"
+    dotfilesDir="${2}"
+    user="${3}"
 
-    [ -d "${HOME}"/.local/share/BLAST/dotfiles ] && rm -rf "${HOME}"/.local/share/BLAST/dotfiles
-    mkdir --parents "${HOME}"/.local/share/BLAST/dotfiles > /dev/null
-    git clone --bare https://github.com/gabrielgnsilva/dotfiles -b dev "${HOME}"/.local/share/BLAST/dotfiles > /dev/null
-    git --git-dir="${HOME}"/.local/share/BLAST/dotfiles --work-tree="${HOME}" checkout -f > /dev/null
-    sed --expression "s/CURRENTUSERNAME/'"${username}"'/g" \
-      --in-place "${HOME}"/.config/gtk-3.0/bookmarks
-  '
+    if [[ -e "${dotfilesDir}" && -L "${dotfilesDir}" ]]; then
+      printf "Refusing to remove: dotfiles dir is a symlink (%s)\n" "${dotfilesDir}" >&2
+      exit 1
+    fi
+    [ -e "${dotfilesDir}" ] && rm -rf -- "${dotfilesDir}"
+    mkdir --parents "$(dirname "${dotfilesDir}")" > /dev/null
+    git clone --bare https://github.com/gabrielgnsilva/dotfiles -b dev "${dotfilesDir}" > /dev/null
+    git --git-dir="${dotfilesDir}" --work-tree="${homeDir}" checkout -f > /dev/null
+
+    bookmarksFile="${homeDir}/.config/gtk-3.0/bookmarks"
+    if [[ -f "${bookmarksFile}" ]]; then
+      sed --expression "s/CURRENTUSERNAME/${user}/g" --in-place "${bookmarksFile}"
+    fi
+  ' bash "${homeDir}" "${dotfilesDir}" "${username}"
 }
 
 function system_setup() {
