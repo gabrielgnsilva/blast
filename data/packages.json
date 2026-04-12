@@ -5,9 +5,9 @@
     "conflicts": [],
     "packages": [
       "bottom",
+      "nvtop",
       "btop",
       "cronie",
-      "curl",
       "dialog",
       "dosfstools",
       "entr",
@@ -15,16 +15,18 @@
       "less",
       "libnewt",
       "lm_sensors",
+      "clinfo",
       "make",
       "man-db",
       "man-pages",
       "mtools",
-      "p7zip",
-      "unzip",
-      "wget",
+      "7zip",
       "zip",
+      "unzip",
+      "unrar",
+      "sudo",
       "figlet",
-      "zoxide"
+      "reflector"
     ]
   },
   {
@@ -64,13 +66,21 @@
     "packages": [
       "mesa",
       "lib32-mesa",
-      "xf86-video-amdgpu",
-      "vulkan-radeon",
-      "lib32-vulkan-radeon",
       "libva-mesa-driver",
       "lib32-libva-mesa-driver",
       "mesa-vdpau",
-      "lib32-mesa-vdpau"
+      "lib32-mesa-vdpau",
+      "vulkan-radeon",
+      "lib32-vulkan-radeon"
+    ]
+  },
+  {
+    "type": "pacman",
+    "purpose": "Provide AMD GPU compute runtimes",
+    "conflicts": [],
+    "packages": [
+      "rocm-opencl-runtime",
+      "rocm-hip-runtime"
     ]
   },
   {
@@ -98,27 +108,39 @@
     "purpose": "Provide terminal emulation and shell enhancements",
     "conflicts": [],
     "packages": [
-      "wezterm",
+      "alacritty",
       "tmux",
       "zsh",
       "zsh-syntax-highlighting",
       "zsh-completions",
-      "zsh-autosuggestions"
+      "zsh-autosuggestions",
+      "zoxide"
     ]
   },
   {
     "type": "pacman",
-    "purpose": "Provide advanced text editing",
+    "purpose": "Provide editor, search and developer utilities",
     "conflicts": [],
     "packages": [
       "fd",
       "fzf",
       "ripgrep",
       "tree-sitter",
-      "shellcheck",
-      "silicon",
+      "tree-sitter-cli",
       "neovim",
-      "lnav"
+      "git",
+      "diff-so-fancy",
+      "silicon",
+      "cloc",
+      "tidy",
+      "shellcheck",
+      "lnav",
+      "hurl",
+      "wget",
+      "curl",
+      "pnpm",
+      "bun",
+      "nvm"
     ]
   },
   {
@@ -148,11 +170,13 @@
   },
   {
     "type": "pacman",
-    "purpose": "Provide Node.js environment and package managers",
+    "purpose": "Provide Java programming environment",
     "conflicts": [],
     "packages": [
-      "nvm",
-      "pnpm"
+      "jdk-openjdk",
+      "maven",
+      "ant",
+      "gradle"
     ]
   },
   {
@@ -178,7 +202,8 @@
     "conflicts": [],
     "packages": [
       "python",
-      "python-pip"
+      "python-pip",
+      "python-virtualenv"
     ]
   },
   {
@@ -186,8 +211,7 @@
     "purpose": "Provide Rust programming environment",
     "conflicts": [],
     "packages": [
-      "rustup",
-      "cargo"
+      "rustup"
     ]
   },
   {
@@ -201,18 +225,24 @@
   },
   {
     "type": "pacman",
-    "purpose": "Provide office suite functionality",
+    "purpose": "Provide office suite",
     "conflicts": [],
     "packages": [
-      "joplin",
-      "libreoffice",
+      "libreoffice-still"
+    ]
+  },
+  {
+    "type": "pacman",
+    "purpose": "Provide document and PDF viewing tools",
+    "conflicts": [],
+    "packages": [
       "zathura",
       "zathura-pdf-poppler"
     ]
   },
   {
     "type": "pacman",
-    "purpose": "Provide Graphics & Reading apps",
+    "purpose": "Provide image editing/viewing and vector graphics design tools",
     "conflicts": [],
     "packages": [
       "gimp",
@@ -228,15 +258,25 @@
       "audacity",
       "kdenlive",
       "obs-studio",
-      "vlc"
+      "vlc",
+      "cava"
     ]
   },
   {
     "type": "pacman",
-    "purpose": "Provide remote desktop access",
+    "purpose": "Provide remote access and SSH tools",
     "conflicts": [],
     "packages": [
-      "remmina"
+      "remmina",
+      "openssh"
+    ]
+  },
+  {
+    "type": "pacman",
+    "purpose": "Provide disc burning tools",
+    "conflicts": [],
+    "packages": [
+      "brasero"
     ]
   },
   {
@@ -249,7 +289,7 @@
   },
   {
     "type": "pacman",
-    "purpose": "Provide Peer-to-Peer downloading",
+    "purpose": "Provide torrent client",
     "conflicts": [],
     "packages": [
       "qbittorrent"
@@ -260,9 +300,19 @@
     "purpose": "Provide web browser",
     "conflicts": [],
     "packages": [
-      "vivaldi",
-      "firefox",
-      "geckodriver"
+      "vivaldi"
+    ]
+  },
+  {
+    "type": "pacman",
+    "purpose": "Provide gaming platform client and utilities",
+    "conflicts": [],
+    "packages": [
+      "steam",
+      "gamemode",
+      "lib32-gamemode",
+      "mangohud",
+      "lib32-mangohud"
     ]
   },
   {
@@ -273,7 +323,6 @@
     ],
     "packages": [
       "qemu-desktop",
-      "qemu",
       "libvirt",
       "dnsmasq",
       "openbsd-netcat",
@@ -281,8 +330,17 @@
       "iptables-nft",
       "edk2-ovmf",
       "swtpm",
-      "bridge-utils",
+      "iproute2",
       "virt-manager"
+    ]
+  },
+  {
+    "type": "pacman",
+    "purpose": "Provide Docker and related tools",
+    "conflicts": [],
+    "packages": [
+      "docker",
+      "docker-compose"
     ]
   },
   {
@@ -316,58 +374,76 @@
   },
   {
     "type": "pacman",
-    "purpose": "Provide Hyprland-based Wayland environment with utilities and enhancements",
+    "purpose": "Provide Wayland environment with utilities and enhancements",
     "conflicts": [],
     "packages": [
-      "hyprland",
-      "qt5ct",
-      "qt6ct",
-      "qt5-wayland",
-      "qt6-wayland",
+      "niri",
       "xdg-desktop-portal",
-      "xdg-desktop-portal-gnome",
-      "xdg-desktop-portal-hyprland",
-      "hyprcursor",
-      "hypridle",
-      "hyprlock",
-      "hyprpaper",
-      "hyprpicker",
-      "hyprsunset",
-      "polkit",
-      "hyprpolkitagent",
-      "gnome-keyring",
-      "libsecret",
-      "libgnome-keyring",
-      "seahorse",
-      "nm-connection-editor",
-      "network-manager-applet",
-      "cava",
-      "waybar",
+      "xdg-desktop-portal-gtk",
+      "xwayland-satellite",
+      "swaybg",
+      "swayidle",
+      "swaylock",
+      "ufw",
       "mako",
       "rofi",
       "rofi-emoji",
-      "wl-clipboard",
-      "cliphist",
-      "wtype",
+      "waybar",
       "udisks2",
       "udiskie",
+      "network-manager-applet",
+      "wl-clipboard",
+      "cliphist",
       "slurp",
       "grim",
       "satty",
+      "hyprpicker"
+    ]
+  },
+  {
+    "type": "pacman",
+    "purpose": "Uniform look for Qt and GTK applications",
+    "conflicts": [],
+    "packages": [
+      "qt5ct",
+      "qt5-wayland",
+      "qt6ct",
+      "qt6-wayland",
+      "breeze",
+      "breeze5",
+      "breeze-gtk",
+      "breeze-icons",
+      "breeze-cursors"
+    ]
+  },
+  {
+    "type": "pacman",
+    "purpose": "Provide file manager",
+    "conflicts": [],
+    "packages": [
       "engrampa",
       "thunar",
       "gvfs",
+      "gvfs-mtp",
+      "exfatprogs",
+      "ntfs-3g",
       "thunar-archive-plugin",
       "thunar-media-tags-plugin",
       "ffmpegthumbnailer",
       "tumbler",
-      "libgsf",
-      "gtk3",
-      "gnome-themes-extra",
-      "papirus-icon-theme",
-      "capitaine-cursors",
-      "slock",
-      "ufw"
+      "libgsf"
+    ]
+  },
+  {
+    "type": "pacman",
+    "purpose": "Provide authorization and PolicyKit tools",
+    "conflicts": [],
+    "packages": [
+      "polkit",
+      "lxqt-policykit",
+      "gnome-keyring",
+      "libsecret",
+      "seahorse"
     ]
   },
   {
