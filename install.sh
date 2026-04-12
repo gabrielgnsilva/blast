@@ -791,8 +791,16 @@ function configBootloader() {
 }
 function check_mkinitcipio_hooks() {
   if [[ "${partition_type}" == "crypto_LUKS" && "${root_device_uuid}" != "${partition_uuid}" ]]; then
-    if ! grep -q -E '(^HOOKS=.*lvm2.*)' /etc/mkinitcpio.conf || ! grep -q -E '(^HOOKS=.*encrypt.*)' /etc/mkinitcpio.conf; then
-      abortInstallation "The 'lvm2' or 'encrypt' hooks are missing in '/etc/mkinitcpio.conf'. Please add them to your HOOKS."
+    local lvm
+    lvm=$(lsblk -no TYPE "$(findmnt -n -o SOURCE /)" | head -n1)
+
+    if [[ "${lvm}" == "lvm" ]]; then
+      if ! grep -q -E '(^HOOKS=.*lvm2.*)' /etc/mkinitcpio.conf; then
+        abortInstallation "The 'lvm2' module is missing in '/etc/mkinitcpio.conf'. Please add it to your HOOKS."
+      fi
+    fi
+    if ! grep -q -E '(^HOOKS=.*encrypt.*)' /etc/mkinitcpio.conf; then
+      abortInstallation "The 'encrypt' hooks are missing in '/etc/mkinitcpio.conf'. Please add them to your HOOKS."
     fi
   fi
 }
