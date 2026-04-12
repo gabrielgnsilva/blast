@@ -1053,13 +1053,21 @@ function checkUserExists() {
 }
 function configUser() {
   whiptail --title "Installation in progress..." --infobox "Configuring username..." 10 80
-  useradd --comment "${name}" \
-    --create-home \
-    --groups wheel \
-    --shell /bin/zsh \
-    "${username}" >&3 \
-    || usermod --append --groups wheel --comment "${name}" && mkdir -p /home/"${username}" && chown "${username}":wheel /home/"${username}"
-  echo "${username}:${password1}" | chpasswd
+  if ! id -u "${username}" >&3; then
+    useradd --comment "${name}" \
+      --create-home \
+      --groups wheel \
+      --shell /bin/zsh \
+      "${username}" >&3
+  else
+    usermod --append --groups wheel \
+      --comment "${name}" \
+      --shell /bin/zsh \
+      "${username}" >&3
+    mkdir -p /home/"${username}" && {
+      chown "${username}":wheel /home/"${username}"
+    }
+  fi
 
   unset password1 password2
 }
