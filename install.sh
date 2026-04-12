@@ -843,12 +843,29 @@ function configPackageManager() {
 function configSudo() {
   whiptail --title "Installation in progress..." --infobox "Configuring sudo..." 10 80
 
+  local tmp
+  tmp=$(mktemp)
+
   {
-    printf "%%wheel    ALL=(ALL:ALL) ALL\n"
-    printf "\n"
-    printf "Defaults lecture = always\n"
-    printf "Defaults insults\n"
-  } | tee /etc/sudoers.d/custom >&3
+    printf '%%wheel ALL=(ALL:ALL) ALL\n'
+    printf '\n'
+    printf 'Defaults lecture=always\n'
+    printf 'Defaults insults\n'
+  } | tee "${tmp}" > /dev/null
+
+  chmod 440 "${tmp}" >&3
+
+  if ! visudo --check --file "${tmp}" > /dev/null 2>&1; then
+    rm -f "${tmp}"
+    abortInstallation "Syntax error in generated sudoers fragment."
+  fi
+
+  install -m 440 "${tmp}" /etc/sudoers.d/10-custom >&3
+  rm -f "${tmp}"
+
+  if ! visudo --check > /dev/null 2>&1; then
+    abortInstallation "Global sudoers validation failed after installing /etc/sudoers.d/10-custom."
+  fi
 }
 function configFiles() {
   whiptail --title "Installation in progress..." --infobox "Replacing config files..." 10 80
