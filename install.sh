@@ -575,7 +575,7 @@ function postInstallationLoop() {
   fi
   if command -v ufw >&3 && pacman -Qq ufw >&3; then
     systemctl enable ufw.service >&3
-    ufw enable >&3
+    pacman -Qq openssh >&3 && ufw allow ssh >&3
   fi
 }
 function installationloop() {
@@ -657,7 +657,7 @@ function configHostname() {
     printf "DEPLOYMENT=production\n"
   } | tee /etc/machine-info >&3
 
-  pacman --sync --needed networkmanager openssh wpa_supplicant --noconfirm >&3
+  pacman --sync --needed networkmanager wpa_supplicant --noconfirm >&3
   systemctl enable NetworkManager.service >&3
 }
 
