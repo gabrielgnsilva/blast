@@ -906,7 +906,7 @@ function configBootloader() {
       } | tee /boot/loader/entries/arch-fallback.conf >&3
     fi
 
-    mkinitcpio -p linux >&3
+    mkinitcpio -P >&3
     systemctl enable systemd-boot-update.service >&3
   fi
 
