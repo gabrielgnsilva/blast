@@ -1153,8 +1153,21 @@ function cloneConfigFiles() {
     git --git-dir="${dotfilesDir}" --work-tree="${homeDir}" checkout -f > /dev/null
 
     bookmarksFile="${homeDir}/.config/gtk-3.0/bookmarks"
-    if [[ -f "${bookmarksFile}" ]]; then
-      sed --expression "s/CURRENTUSERNAME/${user}/g" --in-place "${bookmarksFile}"
+    if [[ ! -f "${bookmarksFile}" ]]; then
+      {
+        printf "file:///home/%s/Documents\n"          "${user}"
+        printf "file:///home/%s/Downloads\n"          "${user}"
+        printf "file:///home/%s/Music\n"              "${user}"
+        printf "file:///home/%s/Pictures\n"           "${user}"
+        printf "file:///home/%s/Projects\n"           "${user}"
+        printf "file:///home/%s/Public\n"             "${user}"
+        printf "file:///home/%s/Repositories\n"       "${user}"
+        printf "file:///home/%s/Templates\n"          "${user}"
+        printf "file:///home/%s/Videos\n"             "${user}"
+        printf "file:///home/%s/Virtual%%20Machines\n" "${user}"
+        printf "file:///home/%s/.config Config\n"     "${user}"
+        printf "file:///home/%s/Work"                 "${user}"
+      } | tee "${bookmarksFile}" > /dev/null
     fi
   ' bash "${homeDir}" "${dotfilesDir}" "${username}"
 }
