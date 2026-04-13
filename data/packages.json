@@ -318,16 +318,14 @@
   {
     "type": "pacman",
     "purpose": "Provide GUI-based virtualization management",
-    "conflicts": [
-      "iptables"
-    ],
+    "conflicts": [],
     "packages": [
       "qemu-desktop",
       "libvirt",
       "dnsmasq",
       "openbsd-netcat",
       "dmidecode",
-      "iptables-nft",
+      "iptables",
       "edk2-ovmf",
       "swtpm",
       "iproute2",
