@@ -1,0 +1,19 @@
+# Package names followed by the supplementary groups the target user should
+# belong to when that package is installed.
+#
+# Format: <pacman-package> <group> [group...]
+# Blank lines and lines starting with '#' are ignored.
+gamemode gamemode
+lib32-gamemode gamemode
+i2c-tools i2c
+lm_sensors i2c
+pipewire audio
+obs-studio audio video
+mesa video render
+lib32-mesa video render
+vulkan-radeon video render
+lib32-vulkan-radeon video render
+steam gamemode audio video render
+libvirt libvirt
+virt-manager libvirt
+docker docker

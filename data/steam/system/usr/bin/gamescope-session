@@ -1,0 +1,44 @@
+#!/usr/bin/env sh
+
+export GAMESCOPE_MODE_SAVE_FILE="${XDG_CONFIG_HOME:-${HOME}/.config}/gamescope/modes.cfg"
+
+MANGOAPP_OPT=""
+
+for config_file in "${HOME}/.gamescope-session" "${XDG_CONFIG_HOME:-${HOME}/.config}/gamescope-session"; do
+  [ -r "${config_file}" ] && . "${config_file}"
+done
+
+GAMESCOPE_W="${GAMESCOPE_W:-${GAMESCOPE_WIDTH:-${wW:-}}}"
+GAMESCOPE_H="${GAMESCOPE_H:-${GAMESCOPE_HEIGHT:-${hH:-}}}"
+GAMESCOPE_R="${GAMESCOPE_R:-${GAMESCOPE_REFRESH:-${r:-}}}"
+
+if [ -z "${GAMESCOPE_W}" ] || [ -z "${GAMESCOPE_H}" ]; then
+  error_message='GAMESCOPE_WIDTH and GAMESCOPE_HEIGHT are required. Please set them in your configuration file (`$HOME/.gamescope-session` or `$XDG_CONFIG_HOME/gamescope-session`).'
+  printf '%s\n' "gamescope-session: ${error_message}" >&2
+  command -v notify-send > /dev/null 2>&1 \
+    && notify-send "gamescope-session" "${error_message}"
+  exit 1
+fi
+
+command -v mangoapp > /dev/null 2>&1 && MANGOAPP_OPT="--mangoapp"
+
+set -- \
+  --steam
+
+[ -n "${MANGOAPP_OPT}" ] && set -- "${@}" "${MANGOAPP_OPT}"
+
+set -- "${@}" \
+  -w "${GAMESCOPE_W}" -W "${GAMESCOPE_W}" \
+  -h "${GAMESCOPE_H}" -H "${GAMESCOPE_H}" \
+  --fullscreen \
+  --force-grab-cursor
+
+[ -n "${GAMESCOPE_R}" ] && set -- "${@}" -r "${GAMESCOPE_R}"
+set -- "${@}" --adaptive-sync
+
+exec /usr/bin/gamescope \
+  "${@}" \
+  -- \
+  /usr/bin/steam \
+  -steamdeck \
+  -steamos3

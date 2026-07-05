@@ -4,7 +4,6 @@
     "purpose": "Provide System tools and Utilities",
     "conflicts": [],
     "packages": [
-      "bottom",
       "nvtop",
       "btop",
       "cronie",
@@ -13,6 +12,7 @@
       "entr",
       "i2c-tools",
       "less",
+      "lesspipe",
       "libnewt",
       "lm_sensors",
       "clinfo",
@@ -26,7 +26,10 @@
       "unrar",
       "sudo",
       "figlet",
-      "reflector"
+      "reflector",
+      "fwupd",
+      "pacman-contrib",
+      "zram-generator"
     ]
   },
   {
@@ -64,14 +67,14 @@
     "purpose": "Provide AMD GPU Drivers",
     "conflicts": [],
     "packages": [
+      "linux-firmware-amdgpu",
       "mesa",
       "lib32-mesa",
-      "libva-mesa-driver",
-      "lib32-libva-mesa-driver",
-      "mesa-vdpau",
-      "lib32-mesa-vdpau",
       "vulkan-radeon",
-      "lib32-vulkan-radeon"
+      "lib32-vulkan-radeon",
+      "vulkan-icd-loader",
+      "lib32-vulkan-icd-loader",
+      "vulkan-tools"
     ]
   },
   {
@@ -80,7 +83,13 @@
     "conflicts": [],
     "packages": [
       "rocm-opencl-runtime",
-      "rocm-hip-runtime"
+      "rocm-hip-runtime",
+      "hip-runtime-amd",
+      "rocm-opencl-sdk",
+      "rocm-hip-sdk",
+      "rocm-smi-lib",
+      "ocl-icd",
+      "rocminfo"
     ]
   },
   {
@@ -96,7 +105,6 @@
       "pipewire-jack",
       "lib32-pipewire-jack",
       "wireplumber",
-      "pamixer",
       "pulsemixer",
       "ladspa",
       "noise-suppression-for-voice",
@@ -108,9 +116,8 @@
     "purpose": "Provide terminal emulation and shell enhancements",
     "conflicts": [],
     "packages": [
-      "alacritty",
+      "ghostty",
       "tmux",
-      "zsh",
       "zsh-syntax-highlighting",
       "zsh-completions",
       "zsh-autosuggestions",
@@ -128,6 +135,7 @@
       "tree-sitter",
       "tree-sitter-cli",
       "neovim",
+      "opencode",
       "git",
       "diff-so-fancy",
       "silicon",
@@ -135,6 +143,8 @@
       "tidy",
       "shellcheck",
       "lnav",
+      "bat",
+      "eza",
       "hurl",
       "wget",
       "curl",
@@ -158,6 +168,18 @@
     "conflicts": [],
     "packages": [
       "go"
+    ]
+  },
+  {
+    "type": "pacman",
+    "purpose": "Provide Lua programming environment",
+    "conflicts": [],
+    "packages": [
+      "lua",
+      "lua51",
+      "lua-luarocks",
+      "lua51-luarocks",
+      "luacheck"
     ]
   },
   {
@@ -247,7 +269,8 @@
     "packages": [
       "gimp",
       "inkscape",
-      "nsxiv"
+      "nsxiv",
+      "imagemagick"
     ]
   },
   {
@@ -309,10 +332,11 @@
     "conflicts": [],
     "packages": [
       "steam",
-      "gamemode",
-      "lib32-gamemode",
+      "gamescope",
       "mangohud",
-      "lib32-mangohud"
+      "lib32-mangohud",
+      "gamemode",
+      "lib32-gamemode"
     ]
   },
   {
@@ -323,6 +347,7 @@
       "qemu-desktop",
       "libvirt",
       "dnsmasq",
+      "vde2",
       "openbsd-netcat",
       "dmidecode",
       "iptables",
@@ -343,7 +368,7 @@
   },
   {
     "type": "pacman",
-    "purpose": "Provide complete LaTeX toolchain (English only)",
+    "purpose": "Provide complete LaTeX toolchain",
     "conflicts": [],
     "packages": [
       "dvisvgm",

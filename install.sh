@@ -16,6 +16,11 @@
 #+      that configures your Arch system exactly like mine: fast, clean,
 #+      and fully automated.
 #+
+#+      This installer is intended for fresh Arch installs only. It may
+#+      overwrite system configuration files, reset /etc/skel, change the
+#+      target user's password, and force-checkout dotfiles into the target
+#+      user's home directory.
+#+
 #=======================================================================
 #+ OPTIONS
 #+      -h, --help          Display this help message and exit
@@ -24,15 +29,19 @@
 #%
 #+      -l, --log-file      Custom log file location
 #%                          Regex: ^[a-zA-Z0-9_/\.-]+$
+#+
+#+      -s, --setup         Setup mode: full, programs, or system
+#%                          Aliases: f, p, s
 #%
-#+      -o, --option        Do nothing
+#+      -p, --programs-file Custom JSON package list
+#%                          Default: data/packages.json
 #+
 #=======================================================================
 #+ EXAMPLES
 #%      Example usages of ${scriptName}.
 #+
 #+      $ ${scriptName} -s full -p my_package_list.json
-#%          This example shows how to use the script with the pacakge
+#%          This example shows how to use the script with the package
 #%          file set to "my_package_list.json", and -s option as full,
 #%          that runs a complete setup for Arch Linux.
 #+
@@ -149,7 +158,6 @@ function _initLogger() {
   local parentDir
   local dir
   local argUsed=false
-  local valuesToRemove=()
   local filteredParams=()
   while [[ "${#}" -gt 0 ]]; do
     case "${1:-}" in
@@ -186,36 +194,29 @@ function _initLogger() {
           && touch "${directory:?}/${filename}"
         scriptLogFile="${filePath}"
         argUsed=true
-        valuesToRemove=("-l" "--log-file" "${filePath}")
-        for element in "${scriptParams[@]}"; do
-          # Check if the element is in the list of values to remove
-          if [[ "${valuesToRemove[*]}" != *"${element}"* ]]; then
-            filteredParams+=("${element}")
-          fi
-        done
-        scriptParams=("${filteredParams[@]}")
         ;;
       *)
-        :
+        filteredParams+=("${1}")
         ;;
     esac
     shift
   done
+  scriptParams=("${filteredParams[@]}")
   cp /dev/null "${scriptLogFile}"
   exec 3>> "${scriptLogFile}"
 }
 function _traceVariables() {
-  log "Origin cwd: ${currentDir}"
-  log "Script parameter: ${scriptParams[*]}"
-  log "Script name: ${scriptName}"
-  log "Script directory: ${scriptDir}"
-  log "Script path: ${scriptPath}"
-  log "Script head size: ${scriptHead}"
+  log "Origin cwd           : ${currentDir}"
+  log "Script parameter     : ${scriptParams[*]}"
+  log "Script name          : ${scriptName}"
+  log "Script directory     : ${scriptDir}"
+  log "Script path          : ${scriptPath}"
+  log "Script head size     : ${scriptHead}"
   log "Script temp directory: ${scriptTempDir}"
-  log "Script temp file: ${scriptTempFile}"
-  log "Script log file: ${scriptLogFile}"
-  log "Message invalid: ${msgInvalid}"
-  log "Message try help: ${msgTryHelp}"
+  log "Script temp file     : ${scriptTempFile}"
+  log "Script log file      : ${scriptLogFile}"
+  log "Message invalid      : ${msgInvalid}"
+  log "Message try help     : ${msgTryHelp}"
 }
 function _enforceScriptDir() {
   local currDir
@@ -283,7 +284,7 @@ function print() {
 }
 function validateArguments() {
   if [[ "${#}" -lt 1 ]]; then
-    error "validade_str: missing required argument\ne.g, $ validateArguments -unzip '' --if-empty\n"
+    error "Missing required argument\ne.g, $ validateArguments -unzip '' --if-empty\n"
   fi
   local special
   local empty
@@ -305,7 +306,7 @@ function validateArguments() {
     shift
   done
   if [[ "${#args[@]}" == 0 ]]; then
-    error "validade_str: missing required argument\ne.g, $ validateArguments -unzip '' --if-empty\n" >&2
+    error "Missing required argument\ne.g, $ validateArguments -unzip '' --if-empty\n" >&2
   fi
   local i
   for i in "${args[@]}"; do
@@ -466,11 +467,11 @@ function abortInstallation() {
 }
 function welcome() {
   whiptail --title "Welcome!" \
-    --msgbox "This script will automatically install a fully-featured Linux desktop, which I use as my main machine.\\n\\n-Gabriel" 10 60 || cancelInstallation
+    --msgbox "This script will automatically install a fully-featured Linux desktop, which I use as my main machine.\\n\\nIMPORTANT: BLAST is intended for fresh Arch installs only. It may overwrite system configuration files, reset /etc/skel, change the target user's password, and force-checkout dotfiles into the target user's home directory.\\n\\n-Gabriel" 14 80 || cancelInstallation
   whiptail --title "Important Note!" \
     --yes-button "Go!" \
     --no-button "Return..." \
-    --yesno "Please ensure your system has updated pacman updates and refreshed Arch keyrings.\\n\\nFailure to do so might result in installation errors for certain programs." 8 70 || cancelInstallation
+    --yesno "Please ensure your system has updated pacman updates and refreshed Arch keyrings.\\n\\nOnly continue on a fresh install or a machine where you accept BLAST overwriting managed system/user configuration.\\n\\nFailure to do so might result in installation errors or overwritten configuration." 12 80 || cancelInstallation
 }
 function confirmInstall() {
   whiptail --title "Let's get this party started!" \
@@ -480,7 +481,7 @@ function confirmInstall() {
 }
 function finalize() {
   whiptail --title "All done!" \
-    --msgbox "Congrats! Provided there were no hidden errors, the script completed successfully and all the programs and configuration files should be in place.\\n\\nTo run the new graphical environment, log out and log back in as your new user, then run the command \"niri-session -l\" to start the graphical environment (it will start automatically in tty1).\\n\\n.t Luke" 13 80
+    --msgbox "Congrats! Provided there were no hidden errors, the script completed successfully and all the programs and configuration files should be in place.\\n\\nTo run the new graphical environment, log out and log back in as your new user, then run the command \"niri-session -l\" to start the graphical environment (it will start automatically in tty1)." 13 80
   clear
   exit 0
 }
@@ -518,22 +519,7 @@ function maininstall() {
   fi
   installPackage "${1}"
 }
-function gitcloneinstall() {
-  local url="${1}"
-  local toPath="${2}"
-  {
-    echo $((n * 100 / total))
-  } | whiptail --title "Installation in progress..." --gauge "Installing \"${url}\" (${n} of ${total}).\n\n${2}" 10 80 0
-
-  sudo -u "${username}" bash -lc '
-    set -euo pipefail
-
-    [ -d "${HOME}/'"${toPath:?}"'" ] && rm -rf "${HOME}/'"${toPath:?}"'"
-    git clone https://github.com/'"${url}"'.git "${HOME}"/'"${toPath}"' > /dev/null
-  '
-}
-
-function _getUserHomeDir() {
+function getUserHomeDir() {
   local user="${1}"
   local entry homeDir homeReal
 
@@ -577,9 +563,40 @@ function _resolvePathUnderHome() {
   fi
 
   local homeDir targetDir
-  homeDir="$(_getUserHomeDir "${user}")"
+  homeDir="$(getUserHomeDir "${user}")"
   targetDir="${homeDir%/}/${relPath}"
   printf '%s' "${targetDir}"
+}
+function assertNoSymlinkPathUnderHome() {
+  local homeDir="${1}"
+  local relPath="${2}"
+  local context="${3}"
+
+  if [[ -z "${homeDir}" || "${homeDir}" != /* || -z "${relPath}" || "${relPath}" =~ [[:cntrl:]] ]]; then
+    abortInstallation "Invalid ${context} path."
+  fi
+
+  relPath="${relPath#./}"
+  if [[ -z "${relPath}" || "${relPath}" == /* ]]; then
+    abortInstallation "Invalid ${context} path."
+  fi
+  if [[ "${relPath}" == '.' || "${relPath}" == ./* || "${relPath}" == */./* || "${relPath}" == */. ]]; then
+    abortInstallation "Invalid ${context} path (dot segments are not allowed): '${relPath}'"
+  fi
+  if [[ "${relPath}" == .. || "${relPath}" == ../* || "${relPath}" == */../* || "${relPath}" == */.. ]]; then
+    abortInstallation "Invalid ${context} path (path traversal is not allowed): '${relPath}'"
+  fi
+
+  local current="${homeDir%/}"
+  local part
+  IFS=/ read -r -a pathParts <<< "${relPath}"
+  for part in "${pathParts[@]}"; do
+    [[ -z "${part}" ]] && abortInstallation "Invalid ${context} path."
+    current="${current}/${part}"
+    if [[ -L "${current}" ]]; then
+      abortInstallation "Refusing to use ${context} path through symlink: ${current}"
+    fi
+  done
 }
 
 function getPinnedNerdFontsVersion() {
@@ -601,7 +618,7 @@ function getPinnedNerdFontsChecksumsFile() {
     printf '%s' "${f1}"
     return
   fi
-  abortInstallation "Missing pinned Nerd Fonts checksums file (.nerd_font/sha256 or .nerd_font/sha256)."
+  abortInstallation "Missing pinned Nerd Fonts checksums file (.nerd_font/sha256)."
 }
 function _getExpectedSHA256() {
   local checksumsFile="${1}"
@@ -645,8 +662,9 @@ function nerdfontinstall() {
   local fonts="${1}"
   local purpose="${2}"
   local homeDir
-  homeDir="$(_getUserHomeDir "${username}")"
+  homeDir="$(getUserHomeDir "${username}")"
   local fontsDir="${homeDir}/.local/share/fonts"
+  assertNoSymlinkPathUnderHome "${homeDir}" ".local/share/fonts" "fonts"
   local font_array
   IFS=' ' read -r -a font_array <<< "${fonts}"
   if [[ ! -d "${fontsDir}" ]]; then
@@ -686,7 +704,7 @@ function nerdfontinstall() {
   fc-cache --really-force >&3
 }
 function postInstallationLoop() {
-  whiptail --title "Enabling services..." 10 80 0
+  whiptail --title "Post installation" --infobox "Enabling services..." 10 80
   if pacman -Qq libvirt >&3; then
     systemctl enable libvirtd.service >&3
   fi
@@ -698,12 +716,69 @@ function postInstallationLoop() {
   fi
   if command -v ufw >&3 && pacman -Qq ufw >&3; then
     systemctl enable ufw.service >&3
-    pacman -Qq openssh >&3 && ufw allow ssh >&3
     ufw default deny incoming >&3
     ufw default allow outgoing >&3
     ufw --force enable >&3
   fi
+  if pacman -Qq steam >&3 && [[ -d "${scriptDir}/data/steam/system" ]]; then
+    cp --recursive --verbose --preserve=mode \
+      "${scriptDir}"/data/steam/system/. \
+      / >&3
+  fi
+  if pacman -Qq zram-generator >&3 && command -v zramctl >&3; then
+    systemctl daemon-reload >&3
+    systemctl restart systemd-zram-setup@zram0 >&3
+  fi
+
+  appendInstalledAppGroups
 }
+function appendInstalledAppGroups() {
+  local appGroupsFile="${scriptDir}/data/app-groups"
+  local package
+  local groups
+  local group
+  local groupsToAdd=()
+  local groupList
+
+  [[ -n "${username:-}" ]] || return 0
+  if [[ ! -f "${appGroupsFile}" ]]; then
+    log "appendInstalledAppGroups: skipping user group setup; missing app group map: ${appGroupsFile}"
+    return 0
+  fi
+
+  whiptail --title "Post installation" --infobox "Configuring user groups..." 10 80
+
+  while read -r package groups; do
+    [[ -n "${package}" ]] || continue
+    [[ "${package}" != \#* ]] || continue
+    [[ -n "${groups}" ]] || continue
+    pacman -Qq "${package}" >&3 || continue
+
+    for group in ${groups}; do
+      if ! getent group "${group}" > /dev/null; then
+        log "appendInstalledAppGroups: skipping missing group '${group}' for installed package '${package}'."
+        continue
+      fi
+      if id -nG "${username}" | grep -qw -- "${group}"; then
+        continue
+      fi
+      case " ${groupsToAdd[*]} " in
+        *" ${group} "*) ;;
+        *) groupsToAdd+=("${group}") ;;
+      esac
+    done
+  done < "${appGroupsFile}"
+
+  [[ "${#groupsToAdd[@]}" -gt 0 ]] || return 0
+
+  groupList=$(
+    IFS=,
+    printf '%s' "${groupsToAdd[*]}"
+  )
+  usermod --append --groups "${groupList}" "${username}" >&3
+  log "appendInstalledAppGroups: added '${username}' to group(s): ${groupsToAdd[*]}."
+}
+
 function installationloop() {
   local total
 
@@ -716,22 +791,17 @@ function installationloop() {
   n=0
   jq -c '.[]' "${progsfile}" | while read -r obj; do
     n=$((n + 1))
-    type="$(jq -r '.type' <<< "${obj}")"
-    purpose="$(jq -r '.purpose' <<< "${obj}")"
+    type="$(jq -r '.type // ""' <<< "${obj}")"
+    purpose="$(jq -r '.purpose // ""' <<< "${obj}")"
 
     case "${type}" in
-      "github")
-        repo="$(jq -r '.repo' <<< "${obj}")"
-        dir="$(jq -r '.dir' <<< "${obj}")"
-        gitcloneinstall "${repo}" "${dir}" "${purpose}"
-        ;;
       "nerdfont")
-        fonts="$(jq -r '.fonts | join(" ")' <<< "${obj}")"
+        fonts="$(jq -r '.fonts // [] | join(" ")' <<< "${obj}")"
         nerdfontinstall "${fonts}" "${purpose}"
         ;;
       *)
-        conflicts="$(jq -r '.conflicts | join(" ")' <<< "${obj}")"
-        packages="$(jq -r '.packages | join(" ")' <<< "${obj}")"
+        conflicts="$(jq -r '.conflicts // [] | join(" ")' <<< "${obj}")"
+        packages="$(jq -r '.packages // [] | join(" ")' <<< "${obj}")"
         maininstall "${packages}" "${purpose}" "${conflicts}"
         ;;
     esac
@@ -749,6 +819,7 @@ function configTimezone() {
   ln --symbolic --force --verbose \
     /usr/share/zoneinfo/"${timezone}" \
     /etc/localtime >&3
+  # Some apps use "/etc/timezone" to determine the timezone, so we write it there as well.
   printf "%s\n" "${timezone}" | tee /etc/timezone >&3
   hwclock --systohc --verbose >&3
 }
@@ -802,14 +873,11 @@ function obtainBootLoader() {
   local selected_part
   local root_device
 
-  bootLoader=$(
-    whiptail --title "Bootloader" --menu "Choose an option" 15 60 5 \
-      "1" "systemd-boot" \
-      "2" "grub" 3>&1 1>&2 2>&3
-  ) || exit 1
+  whiptail --title "Bootloader" \
+    --msgbox "BLAST supports systemd-boot only. GRUB is intentionally not supported." 8 70 || cancelInstallation
 
   mapfile -t disks < <(lsblk -dpno NAME,TYPE | awk '$2 == "disk" { print $1 }')
-  [[ ${#disks[@]} -eq 0 ]] && abortInstallation "Nenhum disco encontrado."
+  [[ ${#disks[@]} -eq 0 ]] && abortInstallation "No disks found on the system."
 
   for d in "${disks[@]}"; do
     disk_menu+=("${d}" "")
@@ -821,11 +889,11 @@ function obtainBootLoader() {
     selected_disk=$(whiptail --title "Select root disk" \
       --menu "Choose the disk where the partition allocated to root (/) is located:" 15 60 6 \
       "${disk_menu[@]}" \
-      3>&1 1>&2 2>&3) || cancelInstallation 'abortado'
+      3>&1 1>&2 2>&3) || cancelInstallation
   fi
 
   mapfile -t parts < <(lsblk -lnpo NAME,TYPE "${selected_disk}" | awk '$2 == "part" { print $1 }')
-  [[ ((${#parts[@]} == 0)) ]] && abortInstallation "❌ Nenhuma partição encontrada em \"${selected_disk}\"."
+  [[ ((${#parts[@]} == 0)) ]] && abortInstallation "No partition found on \"${selected_disk}\"."
 
   for d in "${parts[@]}"; do
     parts_menu+=("${d}" "")
@@ -837,13 +905,51 @@ function obtainBootLoader() {
     selected_part=$(whiptail --title "Select root partition" \
       --menu "Choose the partition allocated to root (/):" 15 60 6 \
       "${parts_menu[@]}" \
-      3>&1 1>&2 2>&3) || cancelInstallation 'abortado'
+      3>&1 1>&2 2>&3) || cancelInstallation
   fi
 
   partition_uuid=$(blkid -s UUID -o value "${selected_part}")
   partition_type=$(blkid -s TYPE -o value "${selected_part}")
   root_device=$(findmnt -n -o SOURCE /)
   root_device_uuid=$(blkid -s UUID -o value "${root_device}")
+
+  if [[ "${partition_type}" == "crypto_LUKS" && "${root_device_uuid}" != "${partition_uuid}" ]]; then
+    obtainCryptoMapperName
+  fi
+}
+function obtainCryptoMapperName() {
+  local mapper_paths=()
+  local mapper_names=()
+  local mapper_menu=()
+  local path
+  local name
+
+  shopt -u failglob
+  mapper_paths=(/dev/mapper/*)
+  shopt -s failglob
+
+  for path in "${mapper_paths[@]}"; do
+    [[ -e "${path}" ]] || continue
+    name="$(basename "${path}")"
+    [[ "${name}" == "control" ]] && continue
+    mapper_names+=("${name}")
+  done
+
+  [[ ${#mapper_names[@]} -eq 0 ]] && abortInstallation "No device mapper entries found in /dev/mapper."
+
+  if [[ ${#mapper_names[@]} -eq 1 ]]; then
+    crypt_mapper_name="${mapper_names[0]}"
+    return
+  fi
+
+  for name in "${mapper_names[@]}"; do
+    mapper_menu+=("${name}" "")
+  done
+
+  crypt_mapper_name=$(whiptail --title "Select encrypted mapper" \
+    --menu "Choose the mapper name used when unlocking the encrypted root partition:" 15 70 6 \
+    "${mapper_menu[@]}" \
+    3>&1 1>&2 2>&3) || cancelInstallation
 }
 function obtainCPUVendor() {
   cpuVendor=$(
@@ -865,61 +971,50 @@ function installMicrocode() {
 function configBootloader() {
   whiptail --title "Installation in progress..." --infobox "Configuring bootloader..." 10 80
 
-  if [[ "${bootLoader}" == "1" ]]; then
-    bootctl install >&3
+  bootctl install >&3
 
+  {
+    printf "default      arch.conf\n"
+    printf "timeout      1\n"
+    printf "console-mode max\n"
+    printf "editor       no\n"
+  } | tee /boot/loader/loader.conf >&3
+  if [[ "${partition_type}" == "crypto_LUKS" && "${root_device_uuid}" != "${partition_uuid}" ]]; then
     {
-      printf "default      arch.conf\n"
-      printf "timeout      1\n"
-      printf "console-mode max\n"
-      printf "editor       no\n"
-    } | tee /boot/loader/loader.conf >&3
-    if [[ "${partition_type}" == "crypto_LUKS" && "${root_device_uuid}" != "${partition_uuid}" ]]; then
-      {
-        printf "title   Arch Linux\n"
-        printf "linux   /vmlinuz-linux\n"
-        printf "initrd  /%s-ucode.img\n" "${cpuVendor}"
-        printf "initrd  /initramfs-linux.img\n"
-        printf 'options cryptdevice=UUID=%s:lvm root=UUID=%s rw\n' "${partition_uuid}" "${root_device_uuid}"
-      } | tee /boot/loader/entries/arch.conf >&3
-      {
-        printf "title   Arch Linux (fallback initramfs)\n"
-        printf "linux   /vmlinuz-linux\n"
-        printf "initrd  /%s-ucode.img\n" "${cpuVendor}"
-        printf "initrd  /initramfs-linux-fallback.img\n"
-        printf 'options cryptdevice=UUID=%s:lvm root=UUID=%s rw\n' "${partition_uuid}" "${root_device_uuid}"
-      } | tee /boot/loader/entries/arch-fallback.conf >&3
-    else
-      {
-        printf "title   Arch Linux\n"
-        printf "linux   /vmlinuz-linux\n"
-        printf "initrd  /%s-ucode.img\n" "${cpuVendor}"
-        printf "initrd  /initramfs-linux.img\n"
-        printf 'options root=UUID=%s rw\n' "${root_device_uuid}"
-      } | tee /boot/loader/entries/arch.conf >&3
-      {
-        printf "title   Arch Linux (fallback initramfs)\n"
-        printf "linux   /vmlinuz-linux\n"
-        printf "initrd  /%s-ucode.img\n" "${cpuVendor}"
-        printf "initrd  /initramfs-linux-fallback.img\n"
-        printf 'options root=UUID=%s rw\n' "${root_device_uuid}"
-      } | tee /boot/loader/entries/arch-fallback.conf >&3
-    fi
-
-    mkinitcpio -P >&3
-    systemctl enable systemd-boot-update.service >&3
+      printf "title   Arch Linux\n"
+      printf "linux   /vmlinuz-linux\n"
+      printf "initrd  /%s-ucode.img\n" "${cpuVendor}"
+      printf "initrd  /initramfs-linux.img\n"
+      printf 'options cryptdevice=UUID=%s:%s root=UUID=%s rw quiet zswap.enabled=0\n' "${partition_uuid}" "${crypt_mapper_name}" "${root_device_uuid}"
+    } | tee /boot/loader/entries/arch.conf >&3
+    {
+      printf "title   Arch Linux (fallback initramfs)\n"
+      printf "linux   /vmlinuz-linux\n"
+      printf "initrd  /%s-ucode.img\n" "${cpuVendor}"
+      printf "initrd  /initramfs-linux-fallback.img\n"
+      printf 'options cryptdevice=UUID=%s:%s root=UUID=%s rw zswap.enabled=0\n' "${partition_uuid}" "${crypt_mapper_name}" "${root_device_uuid}"
+    } | tee /boot/loader/entries/arch-fallback.conf >&3
+  else
+    {
+      printf "title   Arch Linux\n"
+      printf "linux   /vmlinuz-linux\n"
+      printf "initrd  /%s-ucode.img\n" "${cpuVendor}"
+      printf "initrd  /initramfs-linux.img\n"
+      printf 'options root=UUID=%s rw zswap.enabled=0\n' "${root_device_uuid}"
+    } | tee /boot/loader/entries/arch.conf >&3
+    {
+      printf "title   Arch Linux (fallback initramfs)\n"
+      printf "linux   /vmlinuz-linux\n"
+      printf "initrd  /%s-ucode.img\n" "${cpuVendor}"
+      printf "initrd  /initramfs-linux-fallback.img\n"
+      printf 'options root=UUID=%s rw zswap.enabled=0\n' "${root_device_uuid}"
+    } | tee /boot/loader/entries/arch-fallback.conf >&3
   fi
 
-  if [[ "${bootLoader}" == "2" ]]; then
-    pacman --sync --needed --noconfirm grub efibootmgr >&3
-    grub-install --target=x86_64-efi --efi-directory=/boot \
-      --bootloader-id=GRUB --recheck >&3
-    sed --expression 's/GRUB_TIMEOUT=5/GRUB_TIMEOUT=0/g' \
-      --in-place /etc/default/grub >&3
-    grub-mkconfig -o /boot/grub/grub.cfg >&3
-  fi
+  mkinitcpio -P >&3
+  systemctl enable systemd-boot-update.service >&3
 }
-function check_mkinitcipio_hooks() {
+function check_mkinitcpio_hooks() {
   if [[ "${partition_type}" == "crypto_LUKS" && "${root_device_uuid}" != "${partition_uuid}" ]]; then
     local lvm
     lvm=$(lsblk -no TYPE "$(findmnt -n -o SOURCE /)" | head -n1)
@@ -1018,44 +1113,61 @@ function configSudo() {
 function configFiles() {
   whiptail --title "Installation in progress..." --infobox "Replacing config files..." 10 80
 
-  cp --recursive --verbose \
-    "${scriptDir}"/data/etc/X11 \
-    "${scriptDir}"/data/etc/modules-load.d \
-    "${scriptDir}"/data/etc/pam.d \
-    "${scriptDir}"/data/etc/pulse \
-    "${scriptDir}"/data/etc/systemd \
-    "${scriptDir}"/data/etc/tmpfiles.d \
-    /etc >&3
+  cp --recursive --verbose --preserve=mode \
+    "${scriptDir}"/data/system/. \
+    / >&3
+}
+function configSystemServices() {
+  whiptail --title "Installation in progress..." --infobox "Enabling system services..." 10 80
+
+  systemctl enable --now systemd-oomd >&3
 }
 function configDefaultHomeDirectories() {
   whiptail --title "Installation in progress..." --infobox "Replacing default directories..." 10 80
 
-  rm --force --recursive --verbose /etc/skel/* >&3
+  find /etc/skel -mindepth 1 -maxdepth 1 \
+    -exec rm --force --recursive --verbose -- {} + >&3
 
   mkdir --verbose \
+    /etc/skel/.cache \
     /etc/skel/.config \
     /etc/skel/.local \
     /etc/skel/.local/bin \
+    /etc/skel/.local/opt \
     /etc/skel/.local/share/ \
     /etc/skel/.local/share/BLAST \
     /etc/skel/.local/share/fonts \
     /etc/skel/.local/share/icons \
     /etc/skel/.local/share/themes \
-    /etc/skel/Desktop \
-    /etc/skel/Documents \
-    /etc/skel/Downloads \
-    /etc/skel/Music \
-    /etc/skel/Pictures \
-    /etc/skel/Pictures/Screenshots \
-    /etc/skel/Pictures/Wallpapers \
-    /etc/skel/Projects \
-    /etc/skel/Public \
-    /etc/skel/Templates \
-    /etc/skel/Videos \
-    /etc/skel/Virtual\ Machines \
-    /etc/skel/Virtual\ Machines/Disks \
-    /etc/skel/Virtual\ Machines/Images \
-    /etc/skel/Work >&3
+    /etc/skel/.local/state \
+    /etc/skel/.ssh \
+    /etc/skel/backups \
+    /etc/skel/desktop \
+    /etc/skel/docker \
+    /etc/skel/docker/backups \
+    /etc/skel/docker/config \
+    /etc/skel/docker/stacks \
+    /etc/skel/docker/volumes \
+    /etc/skel/documents \
+    /etc/skel/downloads \
+    /etc/skel/games \
+    /etc/skel/music \
+    /etc/skel/pictures \
+    /etc/skel/pictures/profile \
+    /etc/skel/pictures/screenshots \
+    /etc/skel/pictures/wallpapers \
+    /etc/skel/projects \
+    /etc/skel/public \
+    /etc/skel/servers \
+    /etc/skel/templates \
+    /etc/skel/videos \
+    /etc/skel/vms \
+    /etc/skel/vms/disks \
+    /etc/skel/vms/exports \
+    /etc/skel/vms/isos \
+    /etc/skel/vms/snapshots \
+    /etc/skel/work \
+    /etc/skel/work/freelance >&3
 }
 function configXDGBaseDirectory() {
   whiptail --title "Installation in progress..." --infobox "Configuring XDGBaseDir..." 10 80
@@ -1068,7 +1180,7 @@ function configXDGBaseDirectory() {
     printf "\n"
     printf "# XDG Base Directory\n"
     printf "export XDG_CONFIG_HOME=\"\${HOME}\"/.config\n"
-    printf "export XDG_CACHE_HOME=\"\${HOME}\"/.local/cache\n"
+    printf "export XDG_CACHE_HOME=\"\${HOME}\"/.cache\n"
     printf "export XDG_DATA_HOME=\"\${HOME}\"/.local/share\n"
     printf "export XDG_STATE_HOME=\"\${HOME}\"/.local/state\n"
   } | tee /etc/skel/.profile >&3
@@ -1101,10 +1213,16 @@ function checkUserExists() {
   ! { id -u "${username}" >&3; } \
     || whiptail --title "WARNING" --yes-button "CONTINUE" \
       --no-button "No wait..." \
-      --yesno "The user \`${username}\` already exists on this system. BLAST can install for a user already existing, but it will OVERWRITE any conflicting settings/dotfiles on the user account.\\n\\BLAST will NOT overwrite your user files, documents, videos, etc., so don't worry about that, but only click <CONTINUE> if you don't mind your settings being overwritten.\\n\\nNote also that BLAST will change ${username}'s password to the one you just gave." 14 70
+      --yesno "The user \`${username}\` already exists on this system. BLAST can install for a user already existing, but it will OVERWRITE any conflicting settings/dotfiles on the user account.\\n\\BLAST will NOT overwrite your user files, documents, videos, etc., so don't worry about that, but only click <CONTINUE> if you don't mind your settings being overwritten.\\n\\nNote also that BLAST will change ${username}'s password to the one you just gave." 14 70 || cancelInstallation
 }
 function configUser() {
   whiptail --title "Installation in progress..." --infobox "Configuring username..." 10 80
+
+  if ! pacman -Qq zsh >&3; then
+    whiptail --title "Installation in progress..." --infobox "Installing Zsh..." 10 80
+    pacman --sync --needed zsh --noconfirm >&3
+  fi
+
   if ! id -u "${username}" >&3; then
     useradd --comment "${name}" \
       --create-home \
@@ -1112,13 +1230,16 @@ function configUser() {
       --shell /bin/zsh \
       "${username}" >&3
   else
+    local home_dir
+    home_dir="$(getUserHomeDir "${username}")"
     usermod --append --groups wheel \
       --comment "${name}" \
       --shell /bin/zsh \
       "${username}" >&3
-    mkdir -p /home/"${username}" && {
-      chown "${username}":wheel /home/"${username}"
-    }
+    mkdir -p "${home_dir}"
+    local primary_group
+    primary_group="$(id -gn "${username}")"
+    chown "${username}:${primary_group}" "${home_dir}"
   fi
 
   printf '%s:%s\n' "${username}" "${password1}" | chpasswd --crypt-method SHA512
@@ -1129,47 +1250,60 @@ function configUser() {
 function cloneConfigFiles() {
   whiptail --title "Installation in progress..." --infobox "Configuring dotfiles..." 10 80
   local homeDir
-  homeDir="$(_getUserHomeDir "${username}")"
+  homeDir="$(getUserHomeDir "${username}")"
 
   local dotfilesDir
   dotfilesDir="$(_resolvePathUnderHome "${username}" ".local/share/BLAST/dotfiles" "dotfiles")"
+  assertNoSymlinkPathUnderHome "${homeDir}" ".local/share/BLAST/dotfiles" "dotfiles"
+  assertNoSymlinkPathUnderHome "${homeDir}" ".config/gtk-3.0/bookmarks" "GTK bookmarks"
   if [[ -e "${dotfilesDir}" && -L "${dotfilesDir}" ]]; then
     abortInstallation "Refusing to remove: dotfiles dir is a symlink (${dotfilesDir})."
   fi
 
+  # shellcheck disable=SC2016
   runuser -u "${username}" -- bash -lc '
     set -euo pipefail
     homeDir="${1}"
     dotfilesDir="${2}"
-    user="${3}"
 
     if [[ -e "${dotfilesDir}" && -L "${dotfilesDir}" ]]; then
       printf "Refusing to remove: dotfiles dir is a symlink (%s)\n" "${dotfilesDir}" >&2
       exit 1
     fi
+
     [ -e "${dotfilesDir}" ] && rm -rf -- "${dotfilesDir}"
     mkdir --parents "$(dirname "${dotfilesDir}")" > /dev/null
     git clone --bare https://github.com/gabrielgnsilva/dotfiles -b dev "${dotfilesDir}" > /dev/null
     git --git-dir="${dotfilesDir}" --work-tree="${homeDir}" checkout -f > /dev/null
 
-    bookmarksFile="${homeDir}/.config/gtk-3.0/bookmarks"
+    bookmarksDir="${homeDir}/.config/gtk-3.0"
+    bookmarksFile="${bookmarksDir}/bookmarks"
+
+    if [[ ! -d "${bookmarksDir}" ]]; then
+      mkdir --parents "${bookmarksDir}" > /dev/null
+    fi
+
     if [[ ! -f "${bookmarksFile}" ]]; then
       {
-        printf "file:///home/%s/Documents\n"          "${user}"
-        printf "file:///home/%s/Downloads\n"          "${user}"
-        printf "file:///home/%s/Music\n"              "${user}"
-        printf "file:///home/%s/Pictures\n"           "${user}"
-        printf "file:///home/%s/Projects\n"           "${user}"
-        printf "file:///home/%s/Public\n"             "${user}"
-        printf "file:///home/%s/Repositories\n"       "${user}"
-        printf "file:///home/%s/Templates\n"          "${user}"
-        printf "file:///home/%s/Videos\n"             "${user}"
-        printf "file:///home/%s/Virtual%%20Machines\n" "${user}"
-        printf "file:///home/%s/.config Config\n"     "${user}"
-        printf "file:///home/%s/Work"                 "${user}"
+        printf "file://%s/backups\n"   "${homeDir}"
+        printf "file://%s/docker\n"    "${homeDir}"
+        printf "file://%s/documents\n" "${homeDir}"
+        printf "file://%s/downloads\n" "${homeDir}"
+        printf "file://%s/games\n"     "${homeDir}"
+        printf "file://%s/music\n"     "${homeDir}"
+        printf "file://%s/pictures\n"  "${homeDir}"
+        printf "file://%s/projects\n"  "${homeDir}"
+        printf "file://%s/public\n"    "${homeDir}"
+        printf "file://%s/servers\n"   "${homeDir}"
+        printf "file://%s/templates\n" "${homeDir}"
+        printf "file://%s/videos\n"    "${homeDir}"
+        printf "file://%s/vms\n"       "${homeDir}"
+        printf "file://%s/work\n"      "${homeDir}"
+        printf "file://%s/.config\n"   "${homeDir}"
+        printf "file://%s/.local\n"    "${homeDir}"
       } | tee "${bookmarksFile}" > /dev/null
     fi
-  ' bash "${homeDir}" "${dotfilesDir}" "${username}"
+  ' bash "${homeDir}" "${dotfilesDir}"
 }
 
 function system_setup() {
@@ -1179,7 +1313,7 @@ function system_setup() {
   obtainHostname
   obtainCPUVendor
   obtainBootLoader
-  check_mkinitcipio_hooks
+  check_mkinitcpio_hooks
   obtainUserAndPassword
   checkUserExists
   confirmInstall
@@ -1195,6 +1329,7 @@ function system_setup() {
   configPackageManager
   configSudo
   configFiles
+  configSystemServices
   configDefaultHomeDirectories
   configXDGBaseDirectory
   configUser
@@ -1207,6 +1342,7 @@ function programs_setup() {
   # Welcome the user and obtain the necessary data *before* processing it
   welcome
   obtainUser
+  getUserHomeDir "${username}" > /dev/null
   confirmInstall
 
   installationloop
@@ -1223,7 +1359,7 @@ function full_setup() {
   obtainHostname
   obtainCPUVendor
   obtainBootLoader
-  check_mkinitcipio_hooks
+  check_mkinitcpio_hooks
   obtainUserAndPassword
   checkUserExists
   confirmInstall
@@ -1239,6 +1375,7 @@ function full_setup() {
   configPackageManager
   configSudo
   configFiles
+  configSystemServices
   configDefaultHomeDirectories
   configXDGBaseDirectory
   configUser
@@ -1271,7 +1408,7 @@ function _main() {
 
   # region: Options logic (Define options logic here)
   cd "${scriptDir}" || exit 1
-  local option
+  local option=""
   progsfile="${scriptDir}/data/packages.json"
   while [[ "${#}" -gt 0 ]]; do
     case "${1:-}" in
@@ -1284,9 +1421,9 @@ function _main() {
         ;;
       -p | --programs-file)
         shift
-        if [[ ! -f "${1}" ]]; then
-          error "${msgInvalid} \"${1:-}\"\n${msgTryHelp}"
-        fi
+        [[ -z "${1:-}" ]] && error "${msgInvalid} \"${1:-}\"\n${msgTryHelp}"
+        [[ ! -f "${1:-}" ]] && error "\"${1:-}\" does not exist."
+
         progsfile="${1}"
         ;;
       *)
@@ -1296,6 +1433,10 @@ function _main() {
     shift
   done
   # regionend
+
+  # Validate required options
+  [[ -z "${option}" ]] \
+    && error "${scriptName}: missing required setup option (-s|--setup)\n${msgTryHelp}"
 
   # Install dependencies.
   pacman --noconfirm --needed --sync --refresh sudo jq libnewt git unzip curl \
