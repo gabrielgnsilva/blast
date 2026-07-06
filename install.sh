@@ -1273,7 +1273,7 @@ function cloneConfigFiles() {
 
     [ -e "${dotfilesDir}" ] && rm -rf -- "${dotfilesDir}"
     mkdir --parents "$(dirname "${dotfilesDir}")" > /dev/null
-    git clone --bare https://github.com/gabrielgnsilva/dotfiles -b dev "${dotfilesDir}" > /dev/null
+    git clone --bare https://github.com/gabrielgnsilva/dotfiles "${dotfilesDir}" > /dev/null
     git --git-dir="${dotfilesDir}" --work-tree="${homeDir}" checkout -f > /dev/null
 
     bookmarksDir="${homeDir}/.config/gtk-3.0"
