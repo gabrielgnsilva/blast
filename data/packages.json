@@ -282,6 +282,7 @@
       "kdenlive",
       "obs-studio",
       "vlc",
+      "vlc-plugin-ffmpeg",
       "cava"
     ]
   },
