@@ -1,0 +1,72 @@
+- name: Validate services configuration
+  ansible.builtin.import_tasks: validate.yaml
+- name: Get installed Pacman packages
+  ansible.builtin.command:
+    cmd: pacman -Qq
+  register: blast_installed_packages
+  changed_when: false
+- name: Enable and start always-on services
+  ansible.builtin.systemd_service:
+    name: "{{ service_name }}"
+    enabled: true
+    state: started
+  loop: "{{ blast_services_always_enabled }}"
+  loop_control:
+    loop_var: service_name
+- name: Build package-backed service list
+  ansible.builtin.set_fact:
+    blast_enabled_package_services: >-
+      {{
+
+        (blast_enabled_package_services | default([]))
+        + package_service.value
+      }}
+  loop: "{{ blast_package_services | dict2items }}"
+  loop_control:
+    loop_var: package_service
+    label: "{{ package_service.key }}"
+  when: package_service.key in blast_installed_packages.stdout_lines
+- name: Enable package-backed services
+  ansible.builtin.systemd_service:
+    name: "{{ service_name }}"
+    enabled: true
+  loop: "{{ blast_enabled_package_services | default([]) | unique | sort }}"
+  loop_control:
+    loop_var: service_name
+- name: Configure UFW default incoming policy
+  community.general.ufw:
+    direction: incoming
+    policy: deny
+  when:
+    - blast_ufw_enabled | bool
+    - "'ufw' in blast_installed_packages.stdout_lines"
+- name: Configure UFW default outgoing policy
+  community.general.ufw:
+    direction: outgoing
+    policy: allow
+  when:
+    - blast_ufw_enabled | bool
+    - "'ufw' in blast_installed_packages.stdout_lines"
+- name: Enable UFW
+  community.general.ufw:
+    state: enabled
+  when:
+    - blast_ufw_enabled | bool
+    - "'ufw' in blast_installed_packages.stdout_lines"
+- name: Check zramctl availability
+  ansible.builtin.stat:
+    path: /usr/bin/zramctl
+  register: blast_zramctl
+  when:
+    - blast_zram_enabled | bool
+    - "'zram-generator' in blast_installed_packages.stdout_lines"
+- name: Restart zram setup
+  ansible.builtin.systemd_service:
+    name: systemd-zram-setup@zram0.service
+    daemon_reload: true
+    state: restarted
+  when:
+    - blast_zram_enabled | bool
+    - blast_system_files_copy.changed | default(false)
+    - "'zram-generator' in blast_installed_packages.stdout_lines"
+    - blast_zramctl.stat.exists | default(false)

@@ -1,0 +1,10 @@
+- name: Install AMD CPU microcode
+  community.general.pacman:
+    name: amd-ucode
+    state: present
+  when: "'AuthenticAMD' in ansible_facts.processor"
+- name: Install Intel CPU microcode
+  community.general.pacman:
+    name: intel-ucode
+    state: present
+  when: "'GenuineIntel' in ansible_facts.processor"

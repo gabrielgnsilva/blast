@@ -1,0 +1,8 @@
+- name: Install {{ package_category.key }} package groups
+  community.general.pacman:
+    name: "{{ package_group.packages }}"
+    state: present
+  loop: "{{ package_category.value }}"
+  loop_control:
+    loop_var: package_group
+    label: "{{ package_group.name }}"

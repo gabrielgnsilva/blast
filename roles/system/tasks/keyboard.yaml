@@ -1,0 +1,7 @@
+- name: Configure console keyboard
+  ansible.builtin.template:
+    src: vconsole.j2
+    dest: /etc/vconsole.conf
+    owner: root
+    group: root
+    mode: "0644"

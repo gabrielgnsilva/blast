@@ -1,0 +1,6 @@
+[Desktop Entry]
+Name=Steam Gaming Mode
+Exec=env GAMESCOPE_SESSION_MODE=embedded /usr/bin/gamescope-session
+Comment=Steam running in a standalone Gamescope session
+Type=Application
+DesktopNames=gamescope

@@ -1,0 +1,29 @@
+- name: Validate system configuration
+  ansible.builtin.assert:
+    that:
+      - blast_locale is string
+      - blast_locale is match('^[A-Za-z0-9_.@-]+$')
+      - blast_locale_gen is string
+      - blast_locale_gen is match('^[A-Za-z0-9_.@-]+\s+[A-Za-z0-9_-]+$')
+      - blast_keymap is string
+      - blast_keymap is match('^[A-Za-z0-9_.-]+$')
+      - blast_pacman_parallel_downloads is integer
+      - blast_pacman_parallel_downloads >= 1
+      - blast_pacman_parallel_downloads <= 50
+      - blast_skel_directories is iterable
+      - blast_skel_directories | length > 0
+    fail_msg: "Invalid system configuration variables."
+- name: Validate default home directory list
+  ansible.builtin.assert:
+    that:
+      - skel_directory is string
+      - skel_directory | length > 0
+      - not skel_directory.startswith('/')
+      - skel_directory not in ['.', '..']
+      - "'/../' not in '/' + skel_directory + '/'"
+      - "'/./' not in '/' + skel_directory + '/'"
+    fail_msg: "Invalid /etc/skel directory path: {{ skel_directory }}"
+  loop: "{{ blast_skel_directories }}"
+  loop_control:
+    loop_var: skel_directory
+    label: "{{ skel_directory }}"

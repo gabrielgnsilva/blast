@@ -1,0 +1,17 @@
+- name: Enable configured locale
+  ansible.builtin.lineinfile:
+    path: /etc/locale.gen
+    regexp: "^#?{{ blast_locale_gen | regex_escape }}$"
+    line: "{{ blast_locale_gen }}"
+    create: true
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Generate locales
+- name: Configure locale
+  ansible.builtin.template:
+    src: "locale.j2"
+    dest: /etc/locale.conf
+    owner: root
+    group: root
+    mode: "0644"

@@ -1,0 +1,11 @@
+- name: Load hardware package groups
+  ansible.builtin.include_vars:
+    file: packages.yaml
+- name: Install hardware package groups
+  community.general.pacman:
+    name: "{{ package_group.packages }}"
+    state: present
+  loop: "{{ blast_hardware_package_groups }}"
+  loop_control:
+    loop_var: package_group
+    label: "{{ package_group.name }}"

@@ -1,0 +1,56 @@
+applications:
+  - name: web_browser
+    purpose: Provide web browser
+    packages:
+      - vivaldi
+  - name: password_manager
+    purpose: Provide password management
+    packages:
+      - keepassxc
+  - name: office_suite
+    purpose: Provide office suite
+    packages:
+      - libreoffice-still
+  - name: pdf_tools
+    purpose: Provide document and PDF viewing tools
+    packages:
+      - zathura
+      - zathura-pdf-poppler
+  - name: image_tools
+    purpose: Provide image editing/viewing and vector graphics design tools
+    packages:
+      - gimp
+      - inkscape
+      - nsxiv
+      - imagemagick
+  - name: sound_and_video_tools
+    purpose: Provide sound & video apps
+    packages:
+      - audacity
+      - kdenlive
+      - obs-studio
+      - vlc
+      - vlc-plugin-ffmpeg
+      - cava
+  - name: remote_access_tools
+    purpose: Provide remote access and SSH tools
+    packages:
+      - openssh
+      - remmina
+  - name: torrent_client
+    purpose: Provide torrent client
+    packages:
+      - qbittorrent
+  - name: disc_burning_tools
+    purpose: Provide disc burning tools
+    packages:
+      - brasero
+  - name: gaming_platform
+    purpose: Provide gaming platform client and utilities
+    packages:
+      - steam
+      - gamescope
+      - mangohud
+      - lib32-mangohud
+      - gamemode
+      - lib32-gamemode

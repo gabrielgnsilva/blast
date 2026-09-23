@@ -1,0 +1,56 @@
+blast_timezone: America/New_York
+blast_pretty_hostname: "{{ blast_hostname }}"
+blast_chassis: desktop
+blast_deployment: production
+blast_locale: en_US.UTF-8
+blast_locale_gen: en_US.UTF-8 UTF-8
+blast_keymap: us-acentos
+blast_pacman_parallel_downloads: 5
+blast_skel_reset: true
+blast_skel_directories:
+  - .cache
+  - .config
+  - .local
+  - .local/bin
+  - .local/opt
+  - .local/share
+  - .local/share/BLAST
+  - .local/share/applications
+  - .local/share/fonts
+  - .local/share/icons
+  - .local/share/man
+  - .local/share/themes
+  - .local/state
+  - .ssh
+  - backups
+  - desktop
+  - docker
+  - docker/backups
+  - docker/config
+  - docker/data
+  - docker/stacks
+  - documents
+  - downloads
+  - learn
+  - music
+  - pictures
+  - pictures/profile
+  - pictures/screenshots
+  - pictures/wallpapers
+  - projects
+  - public
+  - scratch
+  - servers
+  - servers/bin
+  - servers/hosts
+  - servers/shared
+  - servers/templates
+  - templates
+  - videos
+  - vms
+  - vms/disks
+  - vms/exports
+  - vms/isos
+  - vms/snapshots
+  - vms/templates
+  - work

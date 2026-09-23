@@ -1,0 +1,4 @@
+SHELL=/bin/sh
+
+# Daily, at 12:00, update the mirrorlist with reflector
+0 12 * * * root /usr/bin/flock -n /run/reflector.lock /usr/bin/reflector --country "United States" --country Brazil --country Chile --protocol https --latest 20 --sort rate --save /etc/pacman.d/mirrorlist

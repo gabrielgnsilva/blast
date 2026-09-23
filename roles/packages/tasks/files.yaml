@@ -1,0 +1,29 @@
+- name: Check gnome-keyring package for managed PAM login file
+  ansible.builtin.command:
+    cmd: pacman -Qq gnome-keyring
+  changed_when: false
+- name: Install package-managed PAM files
+  ansible.builtin.copy:
+    src: pam/system/
+    dest: /
+    owner: root
+    group: root
+    mode: preserve
+    directory_mode: preserve
+- name: Check Steam packages for managed Steam system files
+  ansible.builtin.command:
+    cmd: "pacman -Qq {{ package_name }}"
+  changed_when: false
+  loop:
+    - steam
+    - gamescope
+  loop_control:
+    loop_var: package_name
+- name: Install package-managed Steam system files
+  ansible.builtin.copy:
+    src: steam/system/
+    dest: /
+    owner: root
+    group: root
+    mode: "0755"
+    directory_mode: "0755"

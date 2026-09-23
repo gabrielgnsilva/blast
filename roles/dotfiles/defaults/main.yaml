@@ -1,0 +1,19 @@
+blast_dotfiles_repo: https://github.com/gabrielgnsilva/dotfiles
+blast_dotfiles_version: main
+blast_dotfiles_path: .local/share/BLAST/dotfiles
+blast_gtk_bookmarks:
+  - backups
+  - docker
+  - documents
+  - downloads
+  - music
+  - pictures
+  - projects
+  - public
+  - servers
+  - templates
+  - videos
+  - vms
+  - work
+  - .config
+  - .local

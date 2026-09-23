@@ -1,0 +1,22 @@
+- name: Check boot packages
+  ansible.builtin.command:
+    cmd: "pacman -Qq {{ package_name }}"
+  changed_when: false
+  failed_when: false
+  register: blast_boot_packages
+  loop:
+    - linux
+    - mkinitcpio
+    - systemd
+    - "{{ blast_cpu_vendor }}-ucode"
+  loop_control:
+    loop_var: package_name
+- name: Validate boot packages
+  ansible.builtin.assert:
+    that:
+      - package_result.rc == 0
+    fail_msg: "Missing boot package: {{ package_result.package_name }}"
+  loop: "{{ blast_boot_packages.results }}"
+  loop_control:
+    loop_var: package_result
+    label: "{{ package_result.package_name }}"

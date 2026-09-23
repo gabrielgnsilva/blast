@@ -1,0 +1,15 @@
+blast_package_supplementary_groups:
+  gamemode:
+    - gamemode
+  lib32-gamemode:
+    - gamemode
+  i2c-tools:
+    - i2c
+  lm_sensors:
+    - i2c
+  steam:
+    - gamemode
+  libvirt:
+    - libvirt
+  virt-manager:
+    - libvirt

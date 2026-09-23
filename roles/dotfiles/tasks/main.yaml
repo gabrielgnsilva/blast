@@ -1,0 +1,76 @@
+- name: Validate dotfiles configuration
+  ansible.builtin.import_tasks: validate.yaml
+- name: Validate dotfiles paths
+  ansible.builtin.assert:
+    that:
+      - blast_user_home is match('^/')
+      - blast_user_home | length > 1
+    fail_msg: "Could not determine valid dotfiles paths for user {{ blast_username }}."
+- name: Check dotfiles repository path
+  ansible.builtin.stat:
+    path: "{{ blast_user_home }}/{{ blast_dotfiles_path }}"
+    follow: false
+  register: blast_dotfiles_path_stat
+- name: Refuse symlinked dotfiles repository path
+  ansible.builtin.assert:
+    that:
+      - not (blast_dotfiles_path_stat.stat.islnk | default(false))
+    fail_msg: "Refusing to use symlinked dotfiles repository path: {{ blast_user_home }}/{{ blast_dotfiles_path }}"
+- name: Ensure dotfiles parent directory exists
+  ansible.builtin.file:
+    path: "{{ blast_user_home }}/{{ blast_dotfiles_path | dirname }}"
+    state: directory
+    owner: "{{ blast_username }}"
+    group: "{{ blast_user_group }}"
+    mode: "0755"
+- name: Clone dotfiles bare repository
+  ansible.builtin.git:
+    repo: "{{ blast_dotfiles_repo }}"
+    version: "{{ blast_dotfiles_version }}"
+    dest: "{{ blast_user_home }}/{{ blast_dotfiles_path }}"
+    bare: true
+    force: true
+    update: true
+  become: true
+  become_user: "{{ blast_username }}"
+  register: blast_dotfiles_repository
+- name: Check dotfiles work tree
+  ansible.builtin.command:
+    cmd: "git --git-dir={{ blast_user_home }}/{{ blast_dotfiles_path }} --work-tree={{ blast_user_home }} diff --quiet {{ blast_dotfiles_version }} -- ."
+  become: true
+  become_user: "{{ blast_username }}"
+  changed_when: false
+  failed_when: blast_dotfiles_work_tree.rc not in [0, 1]
+  register: blast_dotfiles_work_tree
+- name: Checkout dotfiles into target home
+  ansible.builtin.command:
+    cmd: "git --git-dir={{ blast_user_home }}/{{ blast_dotfiles_path }} --work-tree={{ blast_user_home }} checkout -f {{ blast_dotfiles_version }}"
+  become: true
+  become_user: "{{ blast_username }}"
+  changed_when: true
+  when: blast_dotfiles_repository.changed or blast_dotfiles_work_tree.rc != 0
+- name: Check GTK bookmarks file
+  ansible.builtin.stat:
+    path: "{{ blast_user_home }}/.config/gtk-3.0/bookmarks"
+    follow: false
+  register: blast_gtk_bookmarks_stat
+- name: Refuse symlinked GTK bookmarks file
+  ansible.builtin.assert:
+    that:
+      - not (blast_gtk_bookmarks_stat.stat.islnk | default(false))
+    fail_msg: "Refusing to use symlinked GTK bookmarks file: {{ blast_user_home }}/.config/gtk-3.0/bookmarks"
+- name: Ensure GTK bookmarks directory exists
+  ansible.builtin.file:
+    path: "{{ blast_user_home }}/.config/gtk-3.0"
+    state: directory
+    owner: "{{ blast_username }}"
+    group: "{{ blast_user_group }}"
+    mode: "0755"
+- name: Configure GTK bookmarks
+  ansible.builtin.template:
+    src: gtk-bookmarks.j2
+    dest: "{{ blast_user_home }}/.config/gtk-3.0/bookmarks"
+    owner: "{{ blast_username }}"
+    group: "{{ blast_user_group }}"
+    mode: "0644"
+    force: false

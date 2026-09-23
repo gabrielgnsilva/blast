@@ -1,0 +1,12 @@
+blast_nerd_fonts_enabled: true
+blast_nerd_fonts_version: v3.4.0
+blast_nerd_fonts_base_url: https://github.com/ryanoasis/nerd-fonts/releases/download
+blast_nerd_fonts:
+  - name: Hack
+    sha256: 8ca33a60c791392d872b80d26c42f2bfa914a480f9eb2d7516d9f84373c36897
+  - name: CascadiaCode
+    sha256: 8d80993351a0a6b69a998e5c72060b7200c4f1af1f32b3ad4d8cad27c245940e
+  - name: FiraCode
+    sha256: 7cc4ffd8f7a1fc914cdab7b149808298165ff7a7f40e40d82dea9ebe41e8ca0b
+  - name: JetBrainsMono
+    sha256: 76f05ff3ace48a464a6ca57977998784ff7bdbb65a6d915d7e401cd3927c493c

@@ -1,0 +1,11 @@
+- name: Configure system timezone
+  community.general.timezone:
+    name: "{{ blast_timezone }}"
+    hwclock: UTC
+- name: Write timezone file
+  ansible.builtin.template:
+    src: timezone.j2
+    dest: /etc/timezone
+    owner: root
+    group: root
+    mode: "0644"

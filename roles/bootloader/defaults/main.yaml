@@ -1,0 +1,5 @@
+blast_boot_mount: /boot
+blast_bootloader_loader_conf: /boot/loader/loader.conf
+blast_bootloader_entries_dir: /boot/loader/entries
+blast_mkinitcpio_conf: /etc/mkinitcpio.conf
+blast_mkinitcpio_linux_preset: /etc/mkinitcpio.d/linux.preset

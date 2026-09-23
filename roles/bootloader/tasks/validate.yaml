@@ -1,0 +1,112 @@
+- name: Set CPU microcode vendor
+  ansible.builtin.set_fact:
+    blast_cpu_vendor: >-
+      {{ 'intel' if 'GenuineIntel' in ansible_facts.processor else 'amd' if 'AuthenticAMD' in ansible_facts.processor else '' }}
+- name: Validate bootloader variables
+  ansible.builtin.assert:
+    that:
+      - blast_cpu_vendor in ['amd', 'intel']
+      - blast_partition_uuid is defined
+      - blast_partition_uuid is match('^[A-Za-z0-9._:-]+$')
+      - blast_partition_type is defined
+      - blast_partition_type in ['ext2', 'ext3', 'ext4', 'btrfs', 'xfs', 'crypto_LUKS']
+      - blast_root_device_uuid is defined
+      - blast_root_device_uuid is match('^[A-Za-z0-9._:-]+$')
+      - blast_root_device_type is defined
+      - blast_root_device_type in ['part', 'lvm', 'crypt']
+      - blast_crypt_mapper_name is defined
+      - blast_crypt_mapper_name is string
+    fail_msg: "Invalid bootloader variables. Use the ./install wrapper to select root disk/partition."
+- name: Check UEFI firmware path
+  ansible.builtin.stat:
+    path: /sys/firmware/efi
+  register: blast_efi_path
+- name: Validate UEFI precondition
+  ansible.builtin.assert:
+    that:
+      - blast_efi_path.stat.exists
+      - blast_efi_path.stat.isdir
+    fail_msg: "systemd-boot requires UEFI. /sys/firmware/efi was not found."
+- name: Read /boot mount source and fstype
+  ansible.builtin.command:
+    cmd: "findmnt -n -o SOURCE,FSTYPE {{ blast_boot_mount }}"
+  changed_when: false
+  failed_when: false
+  register: blast_boot_mount_info
+- name: Validate /boot mount precondition
+  ansible.builtin.assert:
+    that:
+      - blast_boot_mount_info.rc == 0
+      - blast_boot_mount_info.stdout.split() | length == 2
+    fail_msg: "Refusing to install bootloader: {{ blast_boot_mount }} is not mounted or could not be inspected."
+- name: Set /boot facts
+  ansible.builtin.set_fact:
+    blast_boot_source: "{{ blast_boot_mount_info.stdout.split()[0] }}"
+    blast_boot_fstype: "{{ blast_boot_mount_info.stdout.split()[1] }}"
+- name: Read /boot partition type GUID
+  ansible.builtin.command:
+    cmd: "lsblk -dno PARTTYPE {{ blast_boot_source }}"
+  changed_when: false
+  failed_when: false
+  register: blast_boot_parttype
+- name: Validate ESP precondition
+  ansible.builtin.assert:
+    that:
+      - blast_boot_fstype in ['vfat', 'fat32', 'msdos']
+      - blast_boot_parttype.rc == 0
+      - blast_boot_parttype.stdout | lower == 'c12a7328-f81f-11d2-ba4b-00a0c93ec93b'
+    fail_msg: "Refusing to install bootloader: {{ blast_boot_mount }} is not a mounted EFI system partition."
+- name: Check boot command paths
+  ansible.builtin.stat:
+    path: "{{ command_path }}"
+  loop:
+    - /usr/bin/bootctl
+    - /usr/bin/mkinitcpio
+  loop_control:
+    loop_var: command_path
+  register: blast_boot_commands
+- name: Validate boot command paths
+  ansible.builtin.assert:
+    that:
+      - command_result.stat.exists
+      - command_result.stat.executable
+    fail_msg: "Missing or non-executable boot dependency: {{ command_result.command_path }}"
+  loop: "{{ blast_boot_commands.results }}"
+  loop_control:
+    loop_var: command_result
+    label: "{{ command_result.command_path }}"
+- name: Check mkinitcpio config
+  ansible.builtin.stat:
+    path: "{{ blast_mkinitcpio_conf }}"
+  register: blast_mkinitcpio_conf_stat
+- name: Ensure mkinitcpio config exists
+  ansible.builtin.assert:
+    that:
+      - blast_mkinitcpio_conf_stat.stat.exists
+      - blast_mkinitcpio_conf_stat.stat.isreg
+    fail_msg: "Missing mkinitcpio config: {{ blast_mkinitcpio_conf }}"
+- name: Read mkinitcpio config
+  ansible.builtin.slurp:
+    src: "{{ blast_mkinitcpio_conf }}"
+  register: blast_mkinitcpio_conf_content
+- name: Set boot mode facts
+  ansible.builtin.set_fact:
+    blast_mkinitcpio_text: "{{ blast_mkinitcpio_conf_content.content | b64decode }}"
+    blast_is_encrypted_root: "{{ blast_partition_type == 'crypto_LUKS' and blast_root_device_uuid != blast_partition_uuid }}"
+    blast_is_lvm_root: "{{ blast_root_device_type == 'lvm' }}"
+- name: Validate encrypted root mapper
+  ansible.builtin.assert:
+    that:
+      - not blast_is_encrypted_root or blast_crypt_mapper_name | length > 0
+      - not blast_is_encrypted_root or blast_crypt_mapper_name is match('^[A-Za-z0-9._+-]+$')
+    fail_msg: "Encrypted root requires a valid mapper name."
+- name: Validate mkinitcpio encrypt hook
+  ansible.builtin.assert:
+    that:
+      - not blast_is_encrypted_root or blast_mkinitcpio_text is regex('(?m)^HOOKS=.*encrypt.*')
+    fail_msg: "The 'encrypt' hook is missing in {{ blast_mkinitcpio_conf }}. Please add it to HOOKS."
+- name: Validate mkinitcpio lvm2 hook
+  ansible.builtin.assert:
+    that:
+      - not (blast_is_encrypted_root and blast_is_lvm_root) or blast_mkinitcpio_text is regex('(?m)^HOOKS=.*lvm2.*')
+    fail_msg: "The 'lvm2' hook is missing in {{ blast_mkinitcpio_conf }}. Please add it to HOOKS."

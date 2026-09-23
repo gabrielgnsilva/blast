@@ -1,0 +1,121 @@
+development:
+  - name: editor
+    purpose: Provide text editor and code editing tools
+    packages:
+      - neovim
+      - opencode
+  - name: developer_tools
+    purpose: Provide general software development utilities
+    packages:
+      - git
+      - gitleaks
+      - diff-so-fancy
+      - make
+      - tree-sitter
+      - tree-sitter-cli
+      - entr
+      - shellcheck
+      - tidy
+      - cloc
+      - jq
+      - fd
+      - fzf
+      - ripgrep
+      - bat
+      - eza
+      - lnav
+      - silicon
+  - name: database_tools
+    purpose: Provide database development and administration tools
+    packages:
+      - dbeaver
+  - name: http_tools
+    purpose: Provide HTTP and network request utilities
+    packages:
+      - curl
+      - wget
+      - hurl
+  - name: c_language
+    purpose: Provide C and C++ compilation tools
+    packages:
+      - gcc
+      - clang
+  - name: go_language
+    purpose: Provide Go programming environment
+    packages:
+      - go
+  - name: java_language
+    purpose: Provide Java programming environment
+    packages:
+      - jdk-openjdk
+      - maven
+      - gradle
+      - ant
+  - name: javascript_language
+    purpose: Provide JavaScript runtime and package management tools
+    packages:
+      - nvm
+      - pnpm
+      - bun
+  - name: lua_language
+    purpose: Provide Lua programming environment
+    packages:
+      - lua
+      - lua51
+      - lua-luarocks
+      - lua51-luarocks
+      - luacheck
+  - name: python_language
+    purpose: Provide Python 3 programming environment
+    packages:
+      - python
+      - python-pip
+      - python-virtualenv
+  - name: rust_language
+    purpose: Provide Rust programming environment
+    packages:
+      - rustup
+  - name: latex_toolchain
+    purpose: Provide complete LaTeX toolchain
+    packages:
+      - dvisvgm
+      - ghostscript
+      - ijs
+      - woff2
+      - perl
+      - perl-yaml-tiny
+      - perl-file-homedir
+      - texlive-basic
+      - texlive-bin
+      - texlive-latex
+      - texlive-latexrecommended
+      - texlive-bibtexextra
+      - texlive-binextra
+      - texlive-fontsextra
+      - texlive-fontutils
+      - texlive-fontsrecommended
+      - texlive-formatsextra
+      - texlive-latexextra
+      - texlive-lang
+      - texlive-mathscience
+      - texlive-pictures
+      - biber
+  - name: docker
+    purpose: Provide Docker and related tools
+    packages:
+      - docker
+      - docker-compose
+  - name: virtualization
+    purpose: Provide GUI-based virtualization management
+    packages:
+      - qemu-desktop
+      - libvirt
+      - dnsmasq
+      - vde2
+      - openbsd-netcat
+      - dmidecode
+      - iptables
+      - edk2-ovmf
+      - swtpm
+      - iproute2
+      - virt-manager

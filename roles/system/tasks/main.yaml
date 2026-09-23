@@ -1,0 +1,20 @@
+- name: Validate system configuration
+  ansible.builtin.import_tasks: validate.yaml
+- name: Configure pacman
+  ansible.builtin.import_tasks: pacman.yaml
+- name: Install base system packages
+  ansible.builtin.import_tasks: packages.yaml
+- name: Configure timezone
+  ansible.builtin.import_tasks: timezone.yaml
+- name: Configure hostname
+  ansible.builtin.import_tasks: hostname.yaml
+- name: Configure locale
+  ansible.builtin.import_tasks: locale.yaml
+- name: Configure console keyboard
+  ansible.builtin.import_tasks: keyboard.yaml
+- name: Configure sudo
+  ansible.builtin.import_tasks: sudo.yaml
+- name: Configure default home skeleton
+  ansible.builtin.import_tasks: skel.yaml
+- name: Install base system files
+  ansible.builtin.import_tasks: files.yaml

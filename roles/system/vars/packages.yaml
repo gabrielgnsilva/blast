@@ -1,0 +1,62 @@
+blast_system_package_groups:
+  - name: system_tools
+    purpose: Provide general system utilities
+    packages:
+      - sudo
+      - less
+      - lesspipe
+      - man-db
+      - man-pages
+      - dialog
+      - libnewt
+      - figlet
+  - name: system_monitoring
+    purpose: Provide system monitoring and hardware inspection tools
+    packages:
+      - btop
+      - nvtop
+  - name: system_services
+    purpose: Provide supporting system services
+    packages:
+      - cronie
+      - zram-generator
+  - name: package_management
+    purpose: Provide Pacman maintenance and package management utilities
+    packages:
+      - reflector
+      - pacman-contrib
+      - pacutils
+      - rebuild-detector
+  - name: filesystem_tools
+    purpose: Provide filesystem, archive and removable-media utilities
+    packages:
+      - dosfstools
+      - exfatprogs
+      - ntfs-3g
+      - mtools
+      - 7zip
+      - zip
+      - unzip
+      - unrar
+  - name: firmware
+    purpose: Provide firmware management utilities
+    packages:
+      - fwupd
+  - name: networking
+    purpose: Provide desktop network management utilities
+    packages:
+      - networkmanager
+      - network-manager-applet
+  - name: firewall
+    purpose: Provide host firewall management
+    packages:
+      - ufw
+  - name: fonts
+    purpose: Provide font management and some commonly used fonts
+    packages:
+      - fontconfig
+      - lib32-fontconfig
+      - noto-fonts
+      - noto-fonts-emoji
+      - otf-ipafont
+      - ttf-liberation

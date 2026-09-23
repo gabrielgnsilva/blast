@@ -1,0 +1,20 @@
+- name: Validate always-on service names
+  ansible.builtin.assert:
+    that:
+      - service_name is string
+      - service_name is match('^[A-Za-z0-9_.@:-]+\.service$')
+    fail_msg: "Invalid systemd service name: {{ service_name }}"
+  loop: "{{ blast_services_always_enabled }}"
+  loop_control:
+    loop_var: service_name
+    label: "{{ service_name }}"
+- name: Validate package-backed service names
+  ansible.builtin.assert:
+    that:
+      - service_name is string
+      - service_name is match('^[A-Za-z0-9_.@:-]+\.service$')
+    fail_msg: "Invalid package-backed systemd service name: {{ service_name }}"
+  loop: "{{ blast_package_services.values() | flatten }}"
+  loop_control:
+    loop_var: service_name
+    label: "{{ service_name }}"

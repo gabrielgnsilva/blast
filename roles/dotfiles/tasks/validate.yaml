@@ -1,0 +1,29 @@
+- name: Validate dotfiles configuration
+  ansible.builtin.assert:
+    that:
+      - blast_dotfiles_repo is string
+      - blast_dotfiles_repo | length > 0
+      - blast_dotfiles_version is string
+      - blast_dotfiles_version | length > 0
+      - blast_dotfiles_path is string
+      - blast_dotfiles_path | length > 0
+      - not blast_dotfiles_path.startswith('/')
+      - blast_dotfiles_path not in ['.', '..']
+      - "'/../' not in '/' + blast_dotfiles_path + '/'"
+      - "'/./' not in '/' + blast_dotfiles_path + '/'"
+      - blast_gtk_bookmarks is iterable
+    fail_msg: "Invalid dotfiles configuration."
+- name: Validate GTK bookmarks configuration
+  ansible.builtin.assert:
+    that:
+      - gtk_bookmark is string
+      - gtk_bookmark | length > 0
+      - not gtk_bookmark.startswith('/')
+      - gtk_bookmark not in ['.', '..']
+      - "'/../' not in '/' + gtk_bookmark + '/'"
+      - "'/./' not in '/' + gtk_bookmark + '/'"
+    fail_msg: "Invalid GTK bookmark path: {{ gtk_bookmark }}"
+  loop: "{{ blast_gtk_bookmarks }}"
+  loop_control:
+    loop_var: gtk_bookmark
+    label: "{{ gtk_bookmark }}"

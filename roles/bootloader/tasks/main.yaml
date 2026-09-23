@@ -1,0 +1,99 @@
+- name: Validate bootloader preconditions
+  ansible.builtin.import_tasks: validate.yaml
+- name: Validate bootloader packages
+  ansible.builtin.import_tasks: validate_packages.yaml
+- name: Check systemd-boot installation
+  ansible.builtin.command:
+    cmd: bootctl is-installed
+  changed_when: false
+  failed_when: false
+  register: blast_systemd_boot_installed
+- name: Install systemd-boot
+  ansible.builtin.command:
+    cmd: bootctl install
+  changed_when: true
+  when: blast_systemd_boot_installed.rc != 0
+- name: Ensure bootloader entries directory exists
+  ansible.builtin.file:
+    path: "{{ blast_bootloader_entries_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+- name: Configure systemd-boot loader
+  ansible.builtin.template:
+    src: loader.conf.j2
+    dest: "{{ blast_bootloader_loader_conf }}"
+    owner: root
+    group: root
+    mode: "0644"
+- name: Configure Arch boot entries
+  ansible.builtin.template:
+    src: "{{ boot_entry.template }}"
+    dest: "{{ blast_bootloader_entries_dir }}/{{ boot_entry.name }}"
+    owner: root
+    group: root
+    mode: "0644"
+  loop:
+    - name: arch.conf
+      template: arch.conf.j2
+    - name: arch-fallback.conf
+      template: arch-fallback.conf.j2
+  loop_control:
+    loop_var: boot_entry
+    label: "{{ boot_entry.name }}"
+  notify: Regenerate initramfs images
+- name: Enable fallback initramfs preset
+  ansible.builtin.lineinfile:
+    path: "{{ blast_mkinitcpio_linux_preset }}"
+    regexp: "^#?PRESETS=.*$"
+    line: "PRESETS=('default' 'fallback')"
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Regenerate initramfs images
+- name: Configure fallback initramfs image path
+  ansible.builtin.lineinfile:
+    path: "{{ blast_mkinitcpio_linux_preset }}"
+    regexp: "^#?fallback_image=.*$"
+    line: 'fallback_image="/boot/initramfs-linux-fallback.img"'
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Regenerate initramfs images
+- name: Configure fallback initramfs options
+  ansible.builtin.lineinfile:
+    path: "{{ blast_mkinitcpio_linux_preset }}"
+    regexp: "^#?fallback_options=.*$"
+    line: 'fallback_options="-S autodetect"'
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Regenerate initramfs images
+- name: Flush bootloader handlers
+  ansible.builtin.meta: flush_handlers
+- name: Validate rendered boot files exist
+  ansible.builtin.stat:
+    path: "{{ boot_file }}"
+  loop:
+    - /boot/vmlinuz-linux
+    - /boot/{{ blast_cpu_vendor }}-ucode.img
+    - /boot/initramfs-linux.img
+    - /boot/initramfs-linux-fallback.img
+  loop_control:
+    loop_var: boot_file
+  register: blast_rendered_boot_files
+- name: Ensure rendered boot files exist
+  ansible.builtin.assert:
+    that:
+      - boot_file_result.stat.exists
+      - boot_file_result.stat.isreg
+    fail_msg: "Missing boot file after mkinitcpio: {{ boot_file_result.boot_file }}"
+  loop: "{{ blast_rendered_boot_files.results }}"
+  loop_control:
+    loop_var: boot_file_result
+    label: "{{ boot_file_result.boot_file }}"
+- name: Enable systemd-boot update service
+  ansible.builtin.systemd_service:
+    name: systemd-boot-update.service
+    enabled: true
