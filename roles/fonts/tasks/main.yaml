@@ -1,0 +1,98 @@
+- name: Validate Nerd Fonts configuration
+  ansible.builtin.import_tasks: validate.yaml
+- name: Validate user font paths
+  ansible.builtin.assert:
+    that:
+      - blast_user_home is match('^/')
+      - blast_user_home | length > 1
+    fail_msg: "Could not determine valid font path for user {{ blast_username }}."
+  when: blast_nerd_fonts_enabled | bool
+- name: Ensure user font directory exists
+  ansible.builtin.file:
+    path: "{{ blast_user_home }}/.local/share/fonts"
+    state: directory
+    owner: "{{ blast_username }}"
+    group: "{{ blast_user_group }}"
+    mode: "0755"
+  when: blast_nerd_fonts_enabled | bool
+- name: Ensure Nerd Fonts download directory exists
+  ansible.builtin.file:
+    path: /tmp/blast-nerd-fonts
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  when: blast_nerd_fonts_enabled | bool
+- name: Check installed Nerd Font markers
+  ansible.builtin.stat:
+    path: "{{ blast_user_home }}/.local/share/fonts/{{ font.name }}/.blast-{{ blast_nerd_fonts_version }}-installed"
+  loop: "{{ blast_nerd_fonts }}"
+  loop_control:
+    loop_var: font
+    label: "{{ font.name }}"
+  register: blast_nerd_font_markers
+  when: blast_nerd_fonts_enabled | bool
+- name: Determine Nerd Fonts requiring installation
+  ansible.builtin.set_fact:
+    blast_nerd_fonts_to_install: "{{ blast_nerd_font_markers.results | rejectattr('stat.exists') | map(attribute='font') | list }}"
+  when: blast_nerd_fonts_enabled | bool
+- name: Download Nerd Font archives
+  ansible.builtin.get_url:
+    url: "{{ blast_nerd_fonts_base_url }}/{{ blast_nerd_fonts_version }}/{{ font.name }}.zip"
+    dest: "/tmp/blast-nerd-fonts/{{ font.name }}-{{ blast_nerd_fonts_version }}.zip"
+    checksum: "sha256:{{ font.sha256 }}"
+    owner: root
+    group: root
+    mode: "0644"
+  loop: "{{ blast_nerd_fonts_to_install | default([]) }}"
+  loop_control:
+    loop_var: font
+    label: "{{ font.name }}"
+  when: blast_nerd_fonts_enabled | bool
+- name: Reset Nerd Font directories
+  ansible.builtin.file:
+    path: "{{ blast_user_home }}/.local/share/fonts/{{ font.name }}"
+    state: absent
+  loop: "{{ blast_nerd_fonts_to_install | default([]) }}"
+  loop_control:
+    loop_var: font
+    label: "{{ font.name }}"
+  when: blast_nerd_fonts_enabled | bool
+- name: Create Nerd Font directories
+  ansible.builtin.file:
+    path: "{{ blast_user_home }}/.local/share/fonts/{{ font.name }}"
+    state: directory
+    owner: "{{ blast_username }}"
+    group: "{{ blast_user_group }}"
+    mode: "0755"
+  loop: "{{ blast_nerd_fonts_to_install | default([]) }}"
+  loop_control:
+    loop_var: font
+    label: "{{ font.name }}"
+  when: blast_nerd_fonts_enabled | bool
+- name: Extract Nerd Font archives
+  ansible.builtin.unarchive:
+    src: "/tmp/blast-nerd-fonts/{{ font.name }}-{{ blast_nerd_fonts_version }}.zip"
+    dest: "{{ blast_user_home }}/.local/share/fonts/{{ font.name }}"
+    remote_src: true
+    owner: "{{ blast_username }}"
+    group: "{{ blast_user_group }}"
+  loop: "{{ blast_nerd_fonts_to_install | default([]) }}"
+  loop_control:
+    loop_var: font
+    label: "{{ font.name }}"
+  notify: Refresh font cache
+  when: blast_nerd_fonts_enabled | bool
+- name: Mark Nerd Fonts as installed
+  ansible.builtin.file:
+    path: "{{ blast_user_home }}/.local/share/fonts/{{ font.name }}/.blast-{{ blast_nerd_fonts_version }}-installed"
+    state: touch
+    owner: "{{ blast_username }}"
+    group: "{{ blast_user_group }}"
+    mode: "0644"
+  loop: "{{ blast_nerd_fonts_to_install | default([]) }}"
+  loop_control:
+    loop_var: font
+    label: "{{ font.name }}"
+  changed_when: false
+  when: blast_nerd_fonts_enabled | bool

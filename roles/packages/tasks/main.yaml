@@ -1,0 +1,12 @@
+- name: Load package groups
+  ansible.builtin.include_vars:
+    dir: groups
+    name: blast_package_categories
+- name: Process package categories
+  ansible.builtin.include_tasks: install_category.yaml
+  loop: "{{ blast_package_categories | dict2items }}"
+  loop_control:
+    loop_var: package_category
+    label: "{{ package_category.key }}"
+- name: Install package-managed files
+  ansible.builtin.import_tasks: files.yaml

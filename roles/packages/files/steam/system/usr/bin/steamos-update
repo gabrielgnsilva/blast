@@ -1,0 +1,4 @@
+#! /bin/bash
+
+# tells Steam client there is no update to perform
+exit 7

@@ -1,0 +1,9 @@
+title   Arch Linux
+linux   /vmlinuz-linux
+initrd  /{{ blast_cpu_vendor }}-ucode.img
+initrd  /initramfs-linux.img
+{% if blast_is_encrypted_root -%}
+options cryptdevice=UUID={{ blast_partition_uuid }}:{{ blast_crypt_mapper_name }} root=UUID={{ blast_root_device_uuid }} rw quiet zswap.enabled=0
+{% else -%}
+options root=UUID={{ blast_root_device_uuid }} rw zswap.enabled=0
+{% endif -%}

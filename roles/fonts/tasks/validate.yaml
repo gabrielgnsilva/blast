@@ -1,0 +1,18 @@
+- name: Validate Nerd Fonts configuration
+  ansible.builtin.assert:
+    that:
+      - blast_nerd_fonts is iterable
+      - blast_nerd_fonts | length > 0
+      - blast_nerd_fonts_version is match('^v[0-9]+\.[0-9]+\.[0-9]+$')
+      - blast_nerd_fonts_base_url is string
+      - blast_nerd_fonts_base_url is match('^https://')
+      - font.name is match('^[a-zA-Z0-9][a-zA-Z0-9._+-]*$')
+      - font.name not in ['.', '..']
+      - not font.name.startswith('.')
+      - font.sha256 is match('^[a-fA-F0-9]{64}$')
+    fail_msg: "Invalid Nerd Font configuration."
+  loop: "{{ blast_nerd_fonts }}"
+  loop_control:
+    loop_var: font
+    label: "{{ font.name | default('unknown') }}"
+  when: blast_nerd_fonts_enabled | bool

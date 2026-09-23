@@ -1,0 +1,6 @@
+- name: Configure GPU vendors
+  ansible.builtin.include_tasks: "gpu/{{ gpu_vendor }}.yaml"
+  loop: "{{ blast_gpu_vendors }}"
+  loop_control:
+    loop_var: gpu_vendor
+    label: "{{ gpu_vendor }}"

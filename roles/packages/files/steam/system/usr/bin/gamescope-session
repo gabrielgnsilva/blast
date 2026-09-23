@@ -1,0 +1,98 @@
+#!/usr/bin/env sh
+
+# Load user configuration first.
+for config_file in \
+  "${HOME}/.gamescope-session" \
+  "${XDG_CONFIG_HOME:-${HOME}/.config}/gamescope-session"; do
+  [ -r "${config_file}" ] && . "${config_file}"
+done
+
+GAMESCOPE_SESSION_MODE="${GAMESCOPE_SESSION_MODE:-nested}"
+case "${GAMESCOPE_SESSION_MODE}" in
+  nested | embedded)
+    ;;
+  *)
+    printf 'Invalid GAMESCOPE_SESSION_MODE: %s\n' \
+      "${GAMESCOPE_SESSION_MODE}" >&2
+    exit 1
+    ;;
+esac
+
+export ENABLE_GAMESCOPE_WSI="${ENABLE_GAMESCOPE_WSI:-1}"
+export GAMESCOPE_MODE_SAVE_FILE="${XDG_CONFIG_HOME:-${HOME}/.config}/gamescope/modes.cfg"
+
+command mkdir -p "$(dirname "${GAMESCOPE_MODE_SAVE_FILE}")"
+command touch "${GAMESCOPE_MODE_SAVE_FILE}"
+
+set -- --steam
+
+XWAYLAND_COUNT="${XWAYLAND_COUNT:-2}"
+set -- "${@}" \
+  --xwayland-count "${XWAYLAND_COUNT}"
+
+command -v mangoapp > /dev/null 2>&1 \
+  && set -- "${@}" --mangoapp
+
+# --------------------------------------------------------------------
+# Session mode
+# --------------------------------------------------------------------
+case "${GAMESCOPE_SESSION_MODE}" in
+  nested)
+    # Gamescope runs as a Wayland client inside Niri.
+    set -- "${@}" \
+      --backend wayland \
+      --fullscreen
+
+    GAMESCOPE_REFRESH_RATE="${GAMESCOPE_REFRESH_RATE:-}"
+    [ -n "${GAMESCOPE_REFRESH_RATE}" ] \
+      && set -- "${@}" \
+        --nested-refresh "${GAMESCOPE_REFRESH_RATE}"
+    ;;
+  embedded)
+    # Gamescope owns the display directly through DRM/KMS.
+    set -- "${@}" \
+      --backend drm
+
+    GAMESCOPE_OUTPUT="${GAMESCOPE_OUTPUT:-"*,eDP-1"}"
+    set -- "${@}" \
+      --prefer-output "${GAMESCOPE_OUTPUT}"
+
+    GAMESCOPE_ADAPTIVE_SYNC="${GAMESCOPE_ADAPTIVE_SYNC:-}"
+    [ "${GAMESCOPE_ADAPTIVE_SYNC}" = '1' ] \
+      && set -- "${@}" \
+        --adaptive-sync
+
+    GAMESCOPE_ENABLE_HDR="${GAMESCOPE_ENABLE_HDR:-}"
+    [ "${GAMESCOPE_ENABLE_HDR}" = '1' ] \
+      && set -- "${@}" \
+        --hdr-enabled
+    ;;
+  *) ;;
+esac
+
+# --------------------------------------------------------------------
+# Resolution
+# --------------------------------------------------------------------
+
+GAMESCOPE_OUTPUT_WIDTH="${GAMESCOPE_OUTPUT_WIDTH:-}"
+GAMESCOPE_OUTPUT_HEIGHT="${GAMESCOPE_OUTPUT_HEIGHT:-}"
+if [ -n "${GAMESCOPE_OUTPUT_WIDTH}" ] && [ -n "${GAMESCOPE_OUTPUT_HEIGHT}" ]; then
+  set -- "${@}" \
+    -W "${GAMESCOPE_OUTPUT_WIDTH}" \
+    -H "${GAMESCOPE_OUTPUT_HEIGHT}"
+fi
+
+GAMESCOPE_INTERNAL_WIDTH="${GAMESCOPE_INTERNAL_WIDTH:-}"
+GAMESCOPE_INTERNAL_HEIGHT="${GAMESCOPE_INTERNAL_HEIGHT:-}"
+if [ -n "${GAMESCOPE_INTERNAL_WIDTH}" ] && [ -n "${GAMESCOPE_INTERNAL_HEIGHT}" ]; then
+  set -- "${@}" \
+    -w "${GAMESCOPE_INTERNAL_WIDTH}" \
+    -h "${GAMESCOPE_INTERNAL_HEIGHT}"
+fi
+
+exec /usr/bin/gamescope "${@}" -- \
+  /usr/bin/steam \
+  -gamepadui \
+  -steamos3 \
+  -steampal \
+  -steamdeck

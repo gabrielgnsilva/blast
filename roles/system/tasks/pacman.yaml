@@ -1,0 +1,40 @@
+- name: Enable pacman options
+  ansible.builtin.lineinfile:
+    path: /etc/pacman.conf
+    regexp: "^#?{{ pacman_option.name }}(?:\\s*=.*)?$"
+    line: "{{ pacman_option.name }}{{ ' = ' + (pacman_option.value | string) if pacman_option.value is defined else '' }}"
+  loop:
+    - name: Color
+    - name: CheckSpace
+    - name: VerbosePkgLists
+    - name: UseSyslog
+    - name: ParallelDownloads
+      value: "{{ blast_pacman_parallel_downloads }}"
+  loop_control:
+    loop_var: pacman_option
+    label: "{{ pacman_option.name }}"
+- name: Enable pacman candy progress
+  ansible.builtin.lineinfile:
+    path: /etc/pacman.conf
+    regexp: "^ILoveCandy$"
+    line: ILoveCandy
+    insertafter: "^VerbosePkgLists$"
+- name: Uncomment existing multilib repository block
+  ansible.builtin.replace:
+    path: /etc/pacman.conf
+    regexp: "(?m)^#\\s*\\[multilib\\]\n#\\s*Include = /etc/pacman.d/mirrorlist$"
+    replace: "[multilib]\nInclude = /etc/pacman.d/mirrorlist"
+- name: Check active multilib repository
+  ansible.builtin.command:
+    cmd: grep -Eq '^\[multilib\]$' /etc/pacman.conf
+  changed_when: false
+  failed_when: false
+  register: blast_pacman_multilib
+- name: Add multilib repository block
+  ansible.builtin.blockinfile:
+    path: /etc/pacman.conf
+    marker: "# {mark} BLAST multilib repository"
+    block: |
+      [multilib]
+      Include = /etc/pacman.d/mirrorlist
+  when: blast_pacman_multilib.rc != 0

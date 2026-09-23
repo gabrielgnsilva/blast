@@ -1,0 +1,8 @@
+- name: Configure custom sudoers fragment
+  ansible.builtin.template:
+    src: sudoers.d-10-custom.j2
+    dest: /etc/sudoers.d/10-custom
+    owner: root
+    group: root
+    mode: "0440"
+    validate: visudo --check --file %s

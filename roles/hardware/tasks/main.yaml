@@ -1,0 +1,8 @@
+- name: Install hardware support packages
+  ansible.builtin.import_tasks: packages.yaml
+- name: Configure CPU
+  ansible.builtin.import_tasks: cpu.yaml
+- name: Configure GPU
+  ansible.builtin.import_tasks: gpu.yaml
+- name: Install hardware system files
+  ansible.builtin.import_tasks: files.yaml

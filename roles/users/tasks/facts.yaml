@@ -1,0 +1,22 @@
+- name: Get target user passwd entry
+  ansible.builtin.command:
+    cmd: "getent passwd {{ blast_username }}"
+  changed_when: false
+  register: blast_user_passwd
+- name: Get target user primary group
+  ansible.builtin.command:
+    cmd: "id -gn {{ blast_username }}"
+  changed_when: false
+  register: blast_user_primary_group
+- name: Set target user facts
+  ansible.builtin.set_fact:
+    blast_user_home: "{{ blast_user_passwd.stdout.split(':')[5] }}"
+    blast_user_group: "{{ blast_user_primary_group.stdout }}"
+- name: Validate target user facts
+  ansible.builtin.assert:
+    that:
+      - blast_user_home is match('^/')
+      - blast_user_home | length > 1
+      - blast_user_group is string
+      - blast_user_group | length > 0
+    fail_msg: "Could not determine valid user facts for {{ blast_username }}."

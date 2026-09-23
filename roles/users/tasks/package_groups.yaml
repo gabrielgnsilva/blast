@@ -1,0 +1,36 @@
+- name: Load package to supplementary group mappings
+  ansible.builtin.include_vars:
+    file: package_groups.yaml
+- name: Get installed Pacman packages
+  ansible.builtin.command:
+    cmd: pacman -Qq
+  register: blast_installed_packages
+  changed_when: false
+- name: Determine supplementary groups from installed packages
+  ansible.builtin.set_fact:
+    blast_required_user_groups: >-
+      {{
+
+        (blast_required_user_groups | default([]))
+        + item.value
+      }}
+  loop: "{{ blast_package_supplementary_groups | dict2items }}"
+  when: item.key in blast_installed_packages.stdout_lines
+  loop_control:
+    label: "{{ item.key }}"
+- name: Deduplicate supplementary groups
+  ansible.builtin.set_fact:
+    blast_required_user_groups: >-
+      {{
+
+        blast_required_user_groups
+        | default([])
+        | unique
+        | sort
+      }}
+- name: Add target user to package-required groups
+  ansible.builtin.user:
+    name: "{{ blast_username }}"
+    groups: "{{ blast_required_user_groups }}"
+    append: true
+  when: blast_required_user_groups | length > 0

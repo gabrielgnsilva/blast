@@ -1,0 +1,94 @@
+- name: Check effective user id
+  ansible.builtin.command:
+    cmd: id -u
+  changed_when: false
+  register: blast_effective_uid
+- name: Ensure playbook is running with root privileges
+  ansible.builtin.assert:
+    that:
+      - blast_effective_uid.stdout == "0"
+    fail_msg: "BLAST must run with root privileges. Re-run with become enabled."
+- name: Ensure target system is Arch Linux
+  ansible.builtin.assert:
+    that:
+      - ansible_facts.os_family == "Archlinux"
+    fail_msg: "BLAST currently supports Arch Linux only. Detected: {{ ansible_facts.distribution }}."
+- name: Check pacman availability
+  ansible.builtin.command:
+    cmd: pacman --version
+  changed_when: false
+- name: Validate required BLAST variables
+  ansible.builtin.assert:
+    that:
+      - blast_timezone is defined
+      - blast_timezone is string
+      - blast_timezone | length > 0
+      - blast_hostname is defined
+      - blast_hostname is string
+      - blast_hostname is match('^([a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\\.)*([a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)$')
+      - blast_hostname | length <= 253
+      - blast_pretty_hostname is defined
+      - blast_pretty_hostname is string
+      - blast_pretty_hostname is match('^[^\r\n\t\x00-\x1f\x7f]{1,256}$')
+      - blast_pretty_hostname | trim | length > 0
+      - blast_chassis is defined
+      - blast_chassis in ['desktop', 'laptop', 'vm']
+      - blast_username is defined
+      - blast_username is string
+      - blast_username is match('^[a-z_][a-z0-9_-]*$')
+      - blast_username | length <= 32
+      - blast_user_name is defined
+      - blast_user_name is string
+      - blast_user_name | length > 0
+      - blast_user_name == blast_user_name | trim
+      - blast_user_update_password is not defined or blast_user_update_password in ['always', 'on_create']
+      - blast_user_password is not defined or blast_user_password is string
+      - blast_user_password is not defined or blast_user_password is match('^\$6\$')
+      - blast_user_update_password | default('on_create') != 'always' or blast_user_password is defined
+      - blast_gpu_vendors is defined
+      - blast_gpu_vendors is iterable
+      - blast_gpu_vendors | length > 0
+      - blast_gpu_vendors | difference(['amd']) | length == 0
+      - blast_partition_uuid is defined
+      - blast_partition_uuid is string
+      - blast_partition_uuid is match('^[A-Za-z0-9._:-]+$')
+      - blast_partition_type is defined
+      - blast_partition_type is string
+      - blast_root_device_uuid is defined
+      - blast_root_device_uuid is string
+      - blast_root_device_uuid is match('^[A-Za-z0-9._:-]+$')
+      - blast_root_device_type is defined
+      - blast_root_device_type is string
+      - blast_crypt_mapper_name is defined
+      - blast_crypt_mapper_name is string
+    fail_msg: "One or more required BLAST variables are missing or invalid. Use the ./install wrapper or pass valid --extra-vars."
+- name: Validate timezone path
+  ansible.builtin.stat:
+    path: "/usr/share/zoneinfo/{{ blast_timezone }}"
+  register: blast_timezone_path
+- name: Ensure timezone exists
+  ansible.builtin.assert:
+    that:
+      - blast_timezone_path.stat.exists
+      - blast_timezone_path.stat.isreg
+    fail_msg: "Invalid timezone: {{ blast_timezone }}. Expected a file under /usr/share/zoneinfo."
+- name: Validate bootloader preconditions before changing the system
+  ansible.builtin.import_role:
+    name: bootloader
+    tasks_from: validate
+- name: Validate system configuration before changing the system
+  ansible.builtin.import_role:
+    name: system
+    tasks_from: validate
+- name: Validate Nerd Fonts configuration before changing the system
+  ansible.builtin.import_role:
+    name: fonts
+    tasks_from: validate
+- name: Validate dotfiles configuration before changing the system
+  ansible.builtin.import_role:
+    name: dotfiles
+    tasks_from: validate
+- name: Validate services configuration before changing the system
+  ansible.builtin.import_role:
+    name: services
+    tasks_from: validate

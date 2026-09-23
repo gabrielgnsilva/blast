@@ -1,0 +1,13 @@
+- name: Configure Arch Linux
+  hosts: local
+  become: true
+  roles:
+    - preflight
+    - system
+    - hardware
+    - bootloader
+    - packages
+    - users
+    - fonts
+    - dotfiles
+    - services

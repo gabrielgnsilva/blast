@@ -1,0 +1,15 @@
+- name: Configure target user
+  ansible.builtin.user:
+    name: "{{ blast_username }}"
+    comment: "{{ blast_user_name }}"
+    create_home: true
+    groups: "wheel"
+    append: true
+    shell: "/bin/zsh"
+    password: "{{ blast_user_password | default(omit) }}"
+    update_password: "{{ blast_user_update_password | default('on_create') }}"
+    state: present
+- name: Configure package-dependent supplementary groups
+  ansible.builtin.import_tasks: package_groups.yaml
+- name: Set target user facts
+  ansible.builtin.import_tasks: facts.yaml

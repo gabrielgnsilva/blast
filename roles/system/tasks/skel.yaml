@@ -1,0 +1,48 @@
+- name: Set managed default home paths
+  ansible.builtin.set_fact:
+    blast_skel_managed_directory_paths: "{{ blast_skel_directories | map('regex_replace', '^', '/etc/skel/') | list }}"
+    blast_skel_managed_paths: >-
+      {{
+
+        (blast_skel_directories | map('regex_replace', '^', '/etc/skel/') | list)
+        + ['/etc/skel/.profile']
+      }}
+  when: blast_skel_reset | bool
+- name: Find existing default home entries
+  ansible.builtin.find:
+    paths: /etc/skel
+    file_type: any
+    hidden: true
+    recurse: true
+  register: blast_skel_entries
+  when: blast_skel_reset | bool
+- name: Remove unmanaged default home entries
+  ansible.builtin.file:
+    path: "{{ skel_entry.path }}"
+    state: absent
+  loop: "{{ blast_skel_entries.files | default([]) }}"
+  loop_control:
+    loop_var: skel_entry
+    label: "{{ skel_entry.path }}"
+  when:
+    - blast_skel_reset | bool
+    - >-
+      skel_entry.path not in blast_skel_managed_paths or (skel_entry.path in blast_skel_managed_directory_paths and not skel_entry.isdir) or (skel_entry.path == '/etc/skel/.profile' and skel_entry.isdir)
+- name: Create default home directories
+  ansible.builtin.file:
+    path: "/etc/skel/{{ skel_directory }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  loop: "{{ blast_skel_directories }}"
+  loop_control:
+    loop_var: skel_directory
+    label: "{{ skel_directory }}"
+- name: Configure default XDG profile
+  ansible.builtin.template:
+    src: skel-profile.j2
+    dest: /etc/skel/.profile
+    owner: root
+    group: root
+    mode: "0644"

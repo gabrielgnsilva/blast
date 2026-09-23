@@ -1,0 +1,484 @@
+#!/bin/bash
+
+set -o errexit
+set -o nounset
+set -o pipefail
+
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+vars_file=""
+password=""
+blast_user_update_password="on_create"
+
+cleanup() {
+  if [[ -n "${vars_file}" && -f "${vars_file}" ]]; then
+    rm --force -- "${vars_file}"
+  fi
+}
+
+trap cleanup EXIT
+
+msg_box() {
+  command whiptail "$@" 3>&1 1>&2 2>&3
+}
+
+cancel_installation() {
+  printf "The installation process was successfully canceled\n"
+  exit 0
+}
+
+abort_installation() {
+  printf 'Error: %s\n' "${1}" >&2
+  exit 1
+}
+
+ensure_root() {
+  if [[ "${EUID}" -ne 0 ]]; then
+    abort_installation "BLAST must run with root privileges. Re-run as root."
+  fi
+}
+
+bootstrap_dependencies() {
+  if ! command -v pacman > /dev/null 2>&1; then
+    abort_installation "pacman was not found. BLAST currently supports Arch Linux only."
+  fi
+
+  pacman --noconfirm --needed --sync ansible libnewt openssl util-linux \
+    || abort_installation "Failed to install bootstrap dependencies. Make sure you are running on Arch Linux as root and have an active internet connection."
+}
+
+yaml_quote() {
+  local value="${1//\'/\'\'}"
+  printf "'%s'" "${value}"
+}
+
+check_dependencies() {
+  local missing=()
+  local dependency
+
+  for dependency in ansible-galaxy ansible-playbook blkid findmnt lsblk openssl whiptail; do
+    if ! command -v "${dependency}" > /dev/null 2>&1; then
+      missing+=("${dependency}")
+    fi
+  done
+
+  if [[ "${#missing[@]}" -gt 0 ]]; then
+    printf 'Missing required dependencies: %s\n' "${missing[*]}" >&2
+    exit 127
+  fi
+}
+
+get_uuid() {
+  local device="${1}"
+  local uuid
+
+  uuid="$(blkid -s UUID -o value "${device}" 2> /dev/null || true)"
+  if [[ -z "${uuid}" ]]; then
+    uuid="$(lsblk -dno UUID "${device}" 2> /dev/null | tr -d '[:space:]' || true)"
+  fi
+
+  [[ -n "${uuid}" ]] || abort_installation "Could not determine UUID for ${device}."
+  printf '%s' "${uuid}"
+}
+
+detect_filesystem_type() {
+  local device="${1}"
+  local type
+
+  type="$(blkid -s TYPE -o value "${device}" 2> /dev/null || true)"
+  if [[ -z "${type}" ]]; then
+    type="$(lsblk -dno FSTYPE "${device}" 2> /dev/null | tr -d '[:space:]' || true)"
+  fi
+
+  printf '%s' "${type}"
+}
+
+get_filesystem_type() {
+  local device="${1}"
+  local type
+
+  type="$(detect_filesystem_type "${device}")"
+  [[ -n "${type}" ]] || abort_installation "Could not determine filesystem/type for ${device}."
+  printf '%s' "${type}"
+}
+
+get_device_type() {
+  local device="${1}"
+  local type
+
+  type="$(lsblk -dno TYPE "${device}" 2> /dev/null | tr -d '[:space:]' || true)"
+  [[ -n "${type}" ]] || abort_installation "Could not determine device type for ${device}."
+  printf '%s' "${type}"
+}
+
+get_current_timezone() {
+  local localtime_path timezone
+
+  localtime_path="$(readlink --canonicalize /etc/localtime 2> /dev/null || true)"
+  if [[ "${localtime_path}" == /usr/share/zoneinfo/* ]]; then
+    timezone="${localtime_path#/usr/share/zoneinfo/}"
+    if [[ -f "/usr/share/zoneinfo/${timezone}" ]]; then
+      printf '%s' "${timezone}"
+      return
+    fi
+  fi
+
+  if [[ -f /etc/timezone ]]; then
+    IFS= read -r timezone < /etc/timezone || true
+    if [[ -f "/usr/share/zoneinfo/${timezone}" ]]; then
+      printf '%s' "${timezone}"
+    fi
+  fi
+}
+
+get_current_hostname() {
+  local current_hostname
+
+  if command -v hostnamectl > /dev/null 2>&1; then
+    current_hostname="$(hostnamectl --static 2> /dev/null || true)"
+  fi
+
+  if [[ -z "${current_hostname:-}" ]] && command -v hostname > /dev/null 2>&1; then
+    current_hostname="$(hostname 2> /dev/null || true)"
+  fi
+
+  printf '%s' "${current_hostname:-}"
+}
+
+get_current_pretty_hostname() {
+  local fallback="${1}"
+  local current_pretty_hostname
+
+  if command -v hostnamectl > /dev/null 2>&1; then
+    current_pretty_hostname="$(hostnamectl --pretty 2> /dev/null || true)"
+  fi
+
+  if [[ -n "${current_pretty_hostname:-}" ]]; then
+    printf '%s' "${current_pretty_hostname}"
+  else
+    printf '%s' "${fallback}"
+  fi
+}
+
+get_current_user_name() {
+  local target_username="${1}"
+  local passwd_entry gecos
+
+  passwd_entry="$(getent passwd "${target_username}" 2> /dev/null || true)"
+  if [[ -n "${passwd_entry}" ]]; then
+    IFS=: read -r _ _ _ _ gecos _ _ <<< "${passwd_entry}"
+    printf '%s' "${gecos%%,*}"
+  fi
+}
+
+obtain_bootloader() {
+  local disks=()
+  local disk_menu=()
+  local selected_disk
+  local parts=()
+  local parts_menu=()
+  local selected_part
+  local root_device
+  local disk part type
+
+  msg_box --title "Bootloader" \
+    --msgbox "BLAST supports systemd-boot only. GRUB is intentionally not supported." 8 70 || cancel_installation
+
+  mapfile -t disks < <(lsblk -dpno NAME,TYPE | awk '$2 == "disk" { print $1 }')
+  [[ "${#disks[@]}" -gt 0 ]] || abort_installation "No disks found on the system."
+
+  for disk in "${disks[@]}"; do
+    disk_menu+=("${disk}" "")
+  done
+
+  if [[ "${#disks[@]}" -eq 1 ]]; then
+    selected_disk="${disks[0]}"
+  else
+    selected_disk=$(msg_box --title "Select root disk" \
+      --menu "Choose the disk where the partition allocated to root (/) is located:" 15 70 6 \
+      "${disk_menu[@]}") || cancel_installation
+  fi
+
+  mapfile -t parts < <(lsblk -lnpo NAME,TYPE "${selected_disk}" | awk '$2 == "part" { print $1 }')
+  [[ "${#parts[@]}" -gt 0 ]] || abort_installation "No partition found on ${selected_disk}."
+
+  for part in "${parts[@]}"; do
+    type="$(detect_filesystem_type "${part}")"
+    parts_menu+=("${part}" "${type:-unknown}")
+  done
+
+  if [[ "${#parts[@]}" -eq 1 ]]; then
+    selected_part="${parts[0]}"
+  else
+    selected_part=$(msg_box --title "Select root partition" \
+      --menu "Choose the partition allocated to root (/):" 15 80 6 \
+      "${parts_menu[@]}") || cancel_installation
+  fi
+
+  root_device="$(findmnt -n -o SOURCE /)"
+  [[ -n "${root_device}" ]] || abort_installation "Could not determine root device."
+
+  blast_partition_uuid="$(get_uuid "${selected_part}")"
+  blast_partition_type="$(get_filesystem_type "${selected_part}")"
+  blast_root_device_uuid="$(get_uuid "${root_device}")"
+  blast_root_device_type="$(get_device_type "${root_device}")"
+
+  blast_crypt_mapper_name=""
+  if [[ "${blast_partition_type}" == "crypto_LUKS" && "${blast_root_device_uuid}" != "${blast_partition_uuid}" ]]; then
+    obtain_crypto_mapper_name
+  fi
+}
+
+obtain_crypto_mapper_name() {
+  local mapper_paths=()
+  local mapper_names=()
+  local mapper_menu=()
+  local path name
+
+  shopt -s nullglob
+  mapper_paths=(/dev/mapper/*)
+  shopt -u nullglob
+
+  for path in "${mapper_paths[@]}"; do
+    [[ -e "${path}" ]] || continue
+    name="$(basename "${path}")"
+    [[ "${name}" == "control" ]] && continue
+    mapper_names+=("${name}")
+  done
+
+  [[ "${#mapper_names[@]}" -gt 0 ]] || abort_installation "No device mapper entries found in /dev/mapper."
+
+  if [[ "${#mapper_names[@]}" -eq 1 ]]; then
+    blast_crypt_mapper_name="${mapper_names[0]}"
+    return
+  fi
+
+  for name in "${mapper_names[@]}"; do
+    mapper_menu+=("${name}" "")
+  done
+
+  blast_crypt_mapper_name=$(msg_box --title "Select encrypted mapper" \
+    --menu "Choose the mapper name used when unlocking the encrypted root partition:" 15 80 6 \
+    "${mapper_menu[@]}") || cancel_installation
+}
+
+welcome() {
+  msg_box --title "Welcome!" \
+    --msgbox "This script will automatically install a fully-featured Linux desktop, which I use as my main machine.\\n\\nIMPORTANT: BLAST is intended for fresh Arch installs only. It may overwrite system configuration files, reset /etc/skel, change the target user's password, and force-checkout dotfiles into the target user's home directory.\\n\\n-Gabriel" 14 80 || cancel_installation
+  msg_box --title "Important Note!" \
+    --yes-button "Go!" \
+    --no-button "Return..." \
+    --yesno "Please ensure your system has updated pacman updates and refreshed Arch keyrings.\\n\\nOnly continue on a fresh install or a machine where you accept BLAST overwriting managed system/user configuration.\\n\\nFailure to do so might result in installation errors or overwritten configuration." 12 80 || cancel_installation
+}
+confirm_install() {
+  msg_box --title "Bootloader changes" \
+    --yes-button "I understand" \
+    --no-button "Return..." \
+    --yesno "BLAST will install systemd-boot with \"bootctl install\", write loader entries under /boot/loader, regenerate initramfs with \"mkinitcpio -P\", and enable systemd-boot-update.service.\\n\\nOnly continue if /boot is mounted as your EFI system partition and you accept these bootloader changes." 13 90 || cancel_installation
+
+  msg_box --title "Let's get this party started!" \
+    --yes-button "Let's go!" \
+    --no-button "No, nevermind!" \
+    --yesno "The rest of the installation will now be totally automated, so you can sit back and relax.\\n\\nIt will take some time, but when done, you can relax even more with your complete system.\\n\\nNow just press <Let's go!> and the system will begin installation!" 13 60 || cancel_installation
+}
+finalize() {
+  msg_box --title "All done!" \
+    --msgbox "Congrats! Provided there were no hidden errors, the script completed successfully and all the programs and configuration files should be in place.\\n\\nTo run the new graphical environment, log out and log back in as your new user, then run the command \"niri-session -l\" to start the graphical environment (it will start automatically in tty1)." 13 80
+  exit 0
+}
+
+obtain_timezone() {
+  timezone=$(msg_box --title "Timezone" --inputbox "First, please enter your timezone." 10 60 "$(get_current_timezone)") || exit 1
+  while [[ ! -f "/usr/share/zoneinfo/${timezone}" ]]; do
+    timezone=$(msg_box --title "Timezone" --nocancel --inputbox "Timezone not valid. You can always check for your timezone in \"/usr/share/zoneinfo\" (e.g: America/New_York)" 10 70 "${timezone}")
+  done
+}
+
+obtain_hostname() {
+  hostname=$(msg_box --title "Hostname" --inputbox "Please, enter the desired hostname: " 10 60 "$(get_current_hostname)") || exit 1
+  while ! [[ "${hostname}" =~ ^([a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)*([a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)$ && "${#hostname}" -le 253 ]]; do
+    hostname=$(msg_box --title "Hostname" --nocancel --inputbox "Invalid hostname. Use only letters, numbers, and hyphens. Do not start or end with a hyphen. Max 253 characters, each part up to 63." 10 70 "${hostname}")
+  done
+
+  prettyHostname=$(msg_box --title "Hostname" --inputbox "Please, enter a human-readable machine identifier string for the hostname \"${hostname}\": " 10 60 "$(get_current_pretty_hostname "${hostname}")") || exit 1
+  while ! [[ "${prettyHostname}" =~ ^[^[:cntrl:]]{1,256}$ && "${prettyHostname}" =~ [^[:space:]] ]]; do
+    prettyHostname=$(msg_box --title "Hostname" --nocancel --inputbox "Invalid pretty hostname. Can include spaces, accents, and symbols, but no line breaks or control characters. Max 256 characters." 10 70 "${prettyHostname}")
+  done
+
+  chassis=$(
+    msg_box --title "Pretty hostname - Chassis" --menu "Choose an option" 15 60 5 \
+      "desktop" " I'm installing linux on a Desktop" \
+      "laptop" " I'm installing linux on a Laptop" \
+      "vm" " I'm installing linux on a VM"
+  ) || exit 1
+}
+
+obtain_gpu_vendors() {
+  local selected_gpus
+
+  msg_box --title "GPU drivers" \
+    --msgbox "BLAST currently supports AMD GPU drivers only.\n\nNVIDIA and Intel options are shown for future support, but they are intentionally blocked for now. If you want to support another GPU manufacturer, edit BLAST and add the required Ansible tasks/package groups yourself." 12 80 || cancel_installation
+
+  while true; do
+    selected_gpus=$(
+      msg_box --title "GPU drivers" \
+        --checklist "Choose the GPU drivers to install:" 15 80 5 \
+        "amd" "AMD GPU drivers (supported)" "on" \
+        "nvidia" "NVIDIA GPU drivers (unsupported/blocked)" "off" \
+        "intel" "Intel GPU drivers (unsupported/blocked)" "off"
+    ) || cancel_installation
+
+    if [[ -z "${selected_gpus}" ]]; then
+      msg_box --title "GPU drivers" \
+        --msgbox "Select AMD to continue. BLAST needs at least one supported GPU driver option." 8 70
+      continue
+    fi
+
+    if [[ " ${selected_gpus} " == *' "nvidia" '* || " ${selected_gpus} " == *' "intel" '* ]]; then
+      msg_box --title "Unsupported GPU drivers" \
+        --msgbox "NVIDIA and Intel GPU drivers are not supported by BLAST yet.\n\nOnly AMD can be selected in this installer. To support another manufacturer, edit BLAST and add the required Ansible tasks/package groups." 11 80
+      continue
+    fi
+
+    if [[ " ${selected_gpus} " == *' "amd" '* ]]; then
+      gpu_vendors=(amd)
+      return
+    fi
+  done
+}
+
+obtain_user_and_password() {
+  local user_exists=false
+
+  # USERNAME
+  username=$(msg_box --title "Username" --inputbox "Please enter a username for the account." 10 60) || exit 1
+  while ! [[ "${username}" =~ ^[a-z_][a-z0-9_-]*$ && "${#username}" -le 32 ]]; do
+    username=$(msg_box --title "Username" --nocancel --inputbox "Invalid username. It must begin with a letter, contain only lowercase letters, numbers, hyphens, or underscores, and be at most 32 characters long." 10 80 "${username}")
+  done
+
+  if id -u "${username}" > /dev/null 2>&1; then
+    user_exists=true
+    msg_box --title "WARNING" --yes-button "CONTINUE" \
+      --no-button "No wait..." \
+      --yesno "The user \`${username}\` already exists on this system. BLAST can install for a user already existing, but it will OVERWRITE any conflicting settings/dotfiles on the user account.\\nBLAST will NOT overwrite your user files, documents, videos, etc., so don't worry about that, but only click <CONTINUE> if you don't mind your settings being overwritten." 13 70 || cancel_installation
+  fi
+
+  # NAME
+  name=$(msg_box --title "Username" --inputbox "Please enter a name for the \"${username}\" account." 10 60 "$(get_current_user_name "${username}")") || exit 1
+  while [[ -z "${name}" || "${name}" =~ ^[[:space:]] || "${name}" =~ [[:space:]]$ ]]; do
+    name=$(msg_box --title "Username" --nocancel --inputbox "Invalid name." 10 60 "${name}")
+  done
+
+  if [[ "${user_exists}" == true ]]; then
+    if msg_box --title "Password" --yes-button "Change password" \
+      --no-button "Keep current" \
+      --yesno "Do you want BLAST to change ${username}'s password?" 8 70; then
+      blast_user_update_password="always"
+      obtain_user_password
+    else
+      blast_user_update_password="on_create"
+      password=""
+    fi
+  else
+    blast_user_update_password="on_create"
+    obtain_user_password
+  fi
+}
+
+obtain_user_password() {
+  password1=$(msg_box --title "Username" --nocancel --passwordbox "Enter a password for \"${username}\"." 10 60)
+  password2=$(msg_box --title "Username" --nocancel --passwordbox "Retype password for \"${username}\"." 10 60)
+  while [[ -z "${password1}" || -z "${password2}" || "${password1}" != "${password2}" ]]; do
+    unset -v password2 password1
+    password1=$(msg_box --title "Username" --nocancel --passwordbox "Passwords do not match.\\n\\nEnter password again." 10 60)
+    password2=$(msg_box --title "Username" --nocancel --passwordbox "Retype password." 10 60)
+  done
+  password=$(
+    printf '%s\n' "${password1}" \
+      | openssl passwd -6 -stdin
+  )
+  unset -v password1 password2
+}
+
+write_vars_file() {
+  vars_file="$(mktemp --tmpdir blast-ansible-vars.XXXXXXXX.yaml)"
+
+  {
+    printf 'blast_user_name: '
+    yaml_quote "${name}"
+    printf '\n'
+    printf 'blast_username: '
+    yaml_quote "${username}"
+    printf '\n'
+    if [[ -n "${password}" ]]; then
+      printf 'blast_user_password: '
+      yaml_quote "${password}"
+      printf '\n'
+    fi
+    printf 'blast_user_update_password: '
+    yaml_quote "${blast_user_update_password}"
+    printf '\n'
+    printf 'blast_timezone: '
+    yaml_quote "${timezone}"
+    printf '\n'
+    printf 'blast_hostname: '
+    yaml_quote "${hostname}"
+    printf '\n'
+    printf 'blast_pretty_hostname: '
+    yaml_quote "${prettyHostname}"
+    printf '\n'
+    printf 'blast_chassis: '
+    yaml_quote "${chassis}"
+    printf '\n'
+    printf 'blast_gpu_vendors:\n'
+    local gpu_vendor
+    for gpu_vendor in "${gpu_vendors[@]}"; do
+      printf '  - '
+      yaml_quote "${gpu_vendor}"
+      printf '\n'
+    done
+    printf 'blast_partition_uuid: '
+    yaml_quote "${blast_partition_uuid}"
+    printf '\n'
+    printf 'blast_partition_type: '
+    yaml_quote "${blast_partition_type}"
+    printf '\n'
+    printf 'blast_root_device_uuid: '
+    yaml_quote "${blast_root_device_uuid}"
+    printf '\n'
+    printf 'blast_root_device_type: '
+    yaml_quote "${blast_root_device_type}"
+    printf '\n'
+    printf 'blast_crypt_mapper_name: '
+    yaml_quote "${blast_crypt_mapper_name}"
+    printf '\n'
+  } > "${vars_file}"
+}
+
+exec_ansible() {
+  cd "${script_dir}"
+  write_vars_file
+
+  ansible-galaxy collection install -r requirements.yaml -p ./collections
+  ansible-playbook site.yaml \
+    --extra-vars "@${vars_file}"
+
+}
+
+main() {
+  ensure_root
+  bootstrap_dependencies
+  check_dependencies
+  welcome
+  obtain_timezone
+  obtain_hostname
+  obtain_gpu_vendors
+  obtain_bootloader
+  obtain_user_and_password
+  confirm_install
+  exec_ansible
+  finalize
+}
+
+if ! (return 0 2> /dev/null); then
+  main "${@}"
+fi

@@ -1,0 +1,99 @@
+desktop:
+  - name: wayland_environment
+    purpose: Provide Wayland environment with utilities and enhancements
+    packages:
+      - niri
+      - swaybg
+      - swayidle
+      - swaylock
+      - mako
+      - rofi
+      - rofi-emoji
+      - waybar
+      - wl-clipboard
+      - cliphist
+      - slurp
+      - grim
+      - satty
+      - hyprpicker
+  - name: xdg
+    purpose: Provide XDG functionalities
+    packages:
+      - xdg-user-dirs
+      - xdg-utils
+  - name: desktop_portals
+    purpose: Provide desktop integration portals and portal backends
+    packages:
+      - xdg-desktop-portal
+      - xdg-desktop-portal-gnome
+      - xdg-desktop-portal-gtk
+  - name: x11_compatibility
+    purpose: Provide X11 compatibility for the Wayland environment
+    packages:
+      - xwayland-satellite
+      - xorg-xrdb
+  - name: qt_gtk_integration
+    purpose: Uniform look for Qt and GTK applications
+    packages:
+      - qt5ct
+      - qt5-wayland
+      - qt6ct
+      - qt6-wayland
+      - breeze
+      - breeze5
+      - breeze-gtk
+      - breeze-icons
+      - breeze-cursors
+  - name: audio
+    purpose: Provide complete audio setup (PipeWire + WirePlumber, and audio backends)
+    packages:
+      - pipewire
+      - lib32-pipewire
+      - pipewire-audio
+      - pipewire-pulse
+      - pipewire-alsa
+      - pipewire-jack
+      - lib32-pipewire-jack
+      - wireplumber
+      - pulsemixer
+      - ladspa
+      - noise-suppression-for-voice
+      - qpwgraph
+  - name: storage
+    purpose: Provide desktop storage and removable device management
+    packages:
+      - udisks2
+      - udiskie
+  - name: file_manager
+    purpose: Provide file management and related desktop integrations
+    packages:
+      - thunar
+      - thunar-archive-plugin
+      - thunar-media-tags-plugin
+      - engrampa
+      - gvfs
+      - gvfs-mtp
+      - tumbler
+      - ffmpegthumbnailer
+      - libgsf
+  - name: policykit
+    purpose: Provide PolicyKit authorization and authentication agent
+    packages:
+      - polkit
+      - lxqt-policykit
+  - name: keyring
+    purpose: Provide desktop secret storage and key management
+    packages:
+      - gnome-keyring
+      - libsecret
+      - seahorse
+  - name: terminal
+    purpose: Provide terminal emulation and shell enhancements
+    packages:
+      - ghostty
+      - tmux
+      - zsh
+      - zsh-syntax-highlighting
+      - zsh-completions
+      - zsh-autosuggestions
+      - zoxide

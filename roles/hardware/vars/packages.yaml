@@ -1,0 +1,6 @@
+blast_hardware_package_groups:
+  - name: hardware_monitoring
+    purpose: Provide hardware monitoring and sensor tools
+    packages:
+      - i2c-tools
+      - lm_sensors

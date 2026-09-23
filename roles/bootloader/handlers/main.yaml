@@ -1,0 +1,3 @@
+- name: Regenerate initramfs images
+  ansible.builtin.command:
+    cmd: mkinitcpio -P

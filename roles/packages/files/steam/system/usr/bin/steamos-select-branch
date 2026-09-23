@@ -1,0 +1,4 @@
+#!/usr/bin/env sh
+
+# simply call shutdown on the client
+echo "Not applicable for this OS"

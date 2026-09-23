@@ -1,0 +1,17 @@
+- name: Check i2c packages for managed i2c module file
+  ansible.builtin.command:
+    cmd: "pacman -Qq {{ package_name }}"
+  changed_when: false
+  loop:
+    - i2c-tools
+    - lm_sensors
+  loop_control:
+    loop_var: package_name
+- name: Install hardware system files
+  ansible.builtin.copy:
+    src: system/
+    dest: /
+    owner: root
+    group: root
+    mode: preserve
+    directory_mode: preserve
