@@ -1,0 +1,5 @@
+- name: Run graphics health checks
+  ansible.builtin.import_tasks: graphics.yml
+
+- name: Run ROCm health checks
+  ansible.builtin.import_tasks: rocm.yml

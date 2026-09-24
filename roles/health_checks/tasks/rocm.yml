@@ -1,0 +1,18 @@
+- name: Check whether ROCm is installed
+  ansible.builtin.command:
+    cmd: pacman -Qq rocminfo
+  register: blast_rocm_package
+  changed_when: false
+  failed_when: false
+
+- name: Check ROCm capability
+  ansible.builtin.command:
+    cmd: rocminfo
+  changed_when: false
+  when: blast_rocm_package.rc == 0
+
+- name: Check OpenCL capability
+  ansible.builtin.command:
+    cmd: clinfo
+  changed_when: false
+  when: blast_rocm_package.rc == 0
