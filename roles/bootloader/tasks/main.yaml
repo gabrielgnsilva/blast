@@ -93,7 +93,3 @@
   loop_control:
     loop_var: boot_file_result
     label: "{{ boot_file_result.boot_file }}"
-- name: Enable systemd-boot update service
-  ansible.builtin.systemd_service:
-    name: systemd-boot-update.service
-    enabled: true
