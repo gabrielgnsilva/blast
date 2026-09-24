@@ -77,7 +77,6 @@
     path: "{{ boot_file }}"
   loop:
     - /boot/vmlinuz-linux
-    - /boot/{{ blast_cpu_vendor }}-ucode.img
     - /boot/initramfs-linux.img
     - /boot/initramfs-linux-fallback.img
   loop_control:
