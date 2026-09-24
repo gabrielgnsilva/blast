@@ -14,11 +14,5 @@ blast_amd_gpu_package_groups:
   - name: amd-gpu-compute
     purpose: Install AMD GPU compute runtimes
     packages:
-      - rocm-opencl-runtime
-      - rocm-hip-runtime
-      - hip-runtime-amd
       - rocm-opencl-sdk
       - rocm-hip-sdk
-      - rocm-smi-lib
-      - ocl-icd
-      - rocminfo
