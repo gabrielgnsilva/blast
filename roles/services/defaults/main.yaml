@@ -2,6 +2,9 @@ blast_services_always_enabled:
   - systemd-oomd.service
   - NetworkManager.service
 blast_package_services:
+  docker:
+    - docker.service
+    - docker.socket
   libvirt:
     - libvirtd.service
   cronie:
