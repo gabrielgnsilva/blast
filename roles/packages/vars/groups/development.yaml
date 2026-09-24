@@ -25,6 +25,14 @@ development:
       - eza
       - lnav
       - silicon
+  - name: build_and_debug
+    purpose: Provide native build systems and debugging tools
+    packages:
+      - base-devel
+      - cmake
+      - ninja
+      - gdb
+      - lldb
   - name: database_tools
     purpose: Provide database development and administration tools
     packages:
