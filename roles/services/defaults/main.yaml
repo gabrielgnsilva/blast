@@ -6,7 +6,5 @@ blast_package_services:
     - libvirtd.service
   cronie:
     - cronie.service
-  openssh:
-    - sshd.service
 blast_ufw_enabled: true
 blast_zram_enabled: true
