@@ -53,9 +53,10 @@ case "${GAMESCOPE_SESSION_MODE}" in
     set -- "${@}" \
       --backend drm
 
-    GAMESCOPE_OUTPUT="${GAMESCOPE_OUTPUT:-"*,eDP-1"}"
-    set -- "${@}" \
-      --prefer-output "${GAMESCOPE_OUTPUT}"
+    GAMESCOPE_OUTPUT="${GAMESCOPE_OUTPUT:-}"
+    [ -n "${GAMESCOPE_OUTPUT}" ] \
+      && set -- "${@}" \
+        --prefer-output "${GAMESCOPE_OUTPUT}"
 
     GAMESCOPE_ADAPTIVE_SYNC="${GAMESCOPE_ADAPTIVE_SYNC:-}"
     [ "${GAMESCOPE_ADAPTIVE_SYNC}" = '1' ] \
