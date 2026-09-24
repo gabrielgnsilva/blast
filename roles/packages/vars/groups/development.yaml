@@ -64,7 +64,6 @@ development:
     packages:
       - nvm
       - pnpm
-      - bun
   - name: lua_language
     purpose: Provide Lua programming environment
     packages:
