@@ -1,6 +1,8 @@
 blast_hardware_package_groups:
   - name: hardware_monitoring
-    purpose: Provide hardware monitoring and sensor tools
+    purpose: Provide hardware monitoring, sensor, and storage health tools
     packages:
       - i2c-tools
       - lm_sensors
+      - smartmontools
+      - nvme-cli
