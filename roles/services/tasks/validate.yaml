@@ -8,6 +8,16 @@
   loop_control:
     loop_var: service_name
     label: "{{ service_name }}"
+- name: Validate always-on timer names
+  ansible.builtin.assert:
+    that:
+      - timer_name is string
+      - timer_name is match('^[A-Za-z0-9_.@:-]+\.timer$')
+    fail_msg: "Invalid systemd timer name: {{ timer_name }}"
+  loop: "{{ blast_timers_always_enabled }}"
+  loop_control:
+    loop_var: timer_name
+    label: "{{ timer_name }}"
 - name: Validate package-backed service names
   ansible.builtin.assert:
     that:
@@ -18,3 +28,13 @@
   loop_control:
     loop_var: service_name
     label: "{{ service_name }}"
+- name: Validate package-backed timer names
+  ansible.builtin.assert:
+    that:
+      - timer_name is string
+      - timer_name is match('^[A-Za-z0-9_.@:-]+\.timer$')
+    fail_msg: "Invalid package-backed systemd timer name: {{ timer_name }}"
+  loop: "{{ blast_package_timers.values() | flatten }}"
+  loop_control:
+    loop_var: timer_name
+    label: "{{ timer_name }}"

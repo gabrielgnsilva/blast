@@ -1,6 +1,7 @@
 blast_services_always_enabled:
   - systemd-oomd.service
   - NetworkManager.service
+blast_timers_always_enabled: []
 blast_package_services:
   docker:
     - docker.service
@@ -9,5 +10,8 @@ blast_package_services:
     - libvirtd.service
   cronie:
     - cronie.service
+blast_package_timers:
+  pacman-contrib:
+    - paccache.timer
 blast_ufw_enabled: true
 blast_zram_enabled: true

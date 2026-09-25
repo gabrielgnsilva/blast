@@ -13,6 +13,14 @@
   loop: "{{ blast_services_always_enabled }}"
   loop_control:
     loop_var: service_name
+- name: Enable and start always-on timers
+  ansible.builtin.systemd_service:
+    name: "{{ timer_name }}"
+    enabled: true
+    state: started
+  loop: "{{ blast_timers_always_enabled }}"
+  loop_control:
+    loop_var: timer_name
 - name: Build package-backed service list
   ansible.builtin.set_fact:
     blast_enabled_package_services: >-
@@ -26,6 +34,19 @@
     loop_var: package_service
     label: "{{ package_service.key }}"
   when: package_service.key in blast_installed_packages.stdout_lines
+- name: Build package-backed timer list
+  ansible.builtin.set_fact:
+    blast_enabled_package_timers: >-
+      {{
+
+        (blast_enabled_package_timers | default([]))
+        + package_timer.value
+      }}
+  loop: "{{ blast_package_timers | dict2items }}"
+  loop_control:
+    loop_var: package_timer
+    label: "{{ package_timer.key }}"
+  when: package_timer.key in blast_installed_packages.stdout_lines
 - name: Enable package-backed services
   ansible.builtin.systemd_service:
     name: "{{ service_name }}"
@@ -33,6 +54,14 @@
   loop: "{{ blast_enabled_package_services | default([]) | unique | sort }}"
   loop_control:
     loop_var: service_name
+- name: Enable package-backed timers
+  ansible.builtin.systemd_service:
+    name: "{{ timer_name }}"
+    enabled: true
+    state: started
+  loop: "{{ blast_enabled_package_timers | default([]) | unique | sort }}"
+  loop_control:
+    loop_var: timer_name
 - name: Configure UFW default incoming policy
   community.general.ufw:
     direction: incoming
