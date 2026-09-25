@@ -5,6 +5,20 @@
     cmd: pacman -Qq
   register: blast_installed_packages
   changed_when: false
+- name: Disable fwupd peer-to-peer metadata sharing
+  community.general.ini_file:
+    path: /etc/fwupd/fwupd.conf
+    section: fwupd
+    option: P2pPolicy
+    value: "nothing"
+    mode: "0644"
+  when: "'fwupd' in blast_installed_packages.stdout_lines"
+- name: Stop and mask passim local cache server
+  ansible.builtin.systemd_service:
+    name: passim.service
+    state: stopped
+    masked: true
+  when: "'passim' in blast_installed_packages.stdout_lines"
 - name: Enable and start always-on services
   ansible.builtin.systemd_service:
     name: "{{ service_name }}"
