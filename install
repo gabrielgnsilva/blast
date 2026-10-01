@@ -8,6 +8,7 @@ script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 vars_file=""
 password=""
 blast_user_update_password="on_create"
+blast_install_optical_media=false
 
 cleanup() {
   if [[ -n "${vars_file}" && -f "${vars_file}" ]]; then
@@ -342,6 +343,17 @@ obtain_gpu_vendors() {
   done
 }
 
+obtain_optical_media() {
+  if msg_box --title "Optical media support" \
+    --yes-button "Install" \
+    --no-button "Skip" \
+    --yesno "Do you want to install complete CD/DVD support?\n\nThis installs Brasero for burning, VLC DVD support, CD/DVD playback and ripping tools, libdvdcss for many CSS-protected DVDs, and UDF utilities." 13 80; then
+    blast_install_optical_media=true
+  else
+    blast_install_optical_media=false
+  fi
+}
+
 obtain_user_and_password() {
   local user_exists=false
 
@@ -445,6 +457,7 @@ write_vars_file() {
     yaml_quote "${blast_root_device_type}"
     printf '\n'
     printf 'blast_root_uses_lvm: %s\n' "${blast_root_uses_lvm}"
+    printf 'blast_install_optical_media: %s\n' "${blast_install_optical_media}"
     printf 'blast_crypt_mapper_name: '
     yaml_quote "${blast_crypt_mapper_name}"
     printf '\n'
@@ -469,6 +482,7 @@ main() {
   obtain_timezone
   obtain_hostname
   obtain_gpu_vendors
+  obtain_optical_media
   obtain_bootloader
   obtain_user_and_password
   confirm_install

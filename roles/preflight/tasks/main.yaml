@@ -61,6 +61,8 @@
       - blast_root_device_type is string
       - blast_root_uses_lvm is defined
       - blast_root_uses_lvm is boolean
+      - blast_install_optical_media is defined
+      - blast_install_optical_media is boolean
       - blast_crypt_mapper_name is defined
       - blast_crypt_mapper_name is string
     fail_msg: "One or more required BLAST variables are missing or invalid. Use the ./install wrapper or pass valid --extra-vars."

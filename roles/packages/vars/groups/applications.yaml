@@ -41,10 +41,6 @@ applications:
     purpose: Provide torrent client
     packages:
       - qbittorrent
-  - name: disc_burning_tools
-    purpose: Provide disc burning tools
-    packages:
-      - brasero
   - name: gaming_platform
     purpose: Provide gaming platform client and utilities
     packages:

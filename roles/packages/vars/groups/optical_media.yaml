@@ -1,0 +1,11 @@
+optical_media:
+  - name: cd_dvd_support
+    purpose: Provide complete CD and DVD playback, burning, ripping, and filesystem support
+    packages:
+      - brasero
+      - libcdio
+      - vlc-plugin-dvd
+      - libdvdcss
+      - whipper
+      - dvdbackup
+      - udftools

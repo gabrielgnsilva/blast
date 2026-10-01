@@ -6,3 +6,4 @@
   loop_control:
     loop_var: package_group
     label: "{{ package_group.name }}"
+  when: package_category.key != 'optical_media' or blast_install_optical_media | bool
