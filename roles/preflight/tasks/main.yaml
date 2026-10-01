@@ -59,6 +59,8 @@
       - blast_root_device_uuid is match('^[A-Za-z0-9._:-]+$')
       - blast_root_device_type is defined
       - blast_root_device_type is string
+      - blast_root_uses_lvm is defined
+      - blast_root_uses_lvm is boolean
       - blast_crypt_mapper_name is defined
       - blast_crypt_mapper_name is string
     fail_msg: "One or more required BLAST variables are missing or invalid. Use the ./install wrapper or pass valid --extra-vars."

@@ -9,14 +9,16 @@
       - blast_partition_uuid is defined
       - blast_partition_uuid is match('^[A-Za-z0-9._:-]+$')
       - blast_partition_type is defined
-      - blast_partition_type in ['ext2', 'ext3', 'ext4', 'btrfs', 'xfs', 'crypto_LUKS']
+      - blast_partition_type in ['ext2', 'ext3', 'ext4', 'btrfs', 'xfs', 'LVM2_member', 'crypto_LUKS']
       - blast_root_device_uuid is defined
       - blast_root_device_uuid is match('^[A-Za-z0-9._:-]+$')
       - blast_root_device_type is defined
       - blast_root_device_type in ['part', 'lvm', 'crypt']
+      - blast_root_uses_lvm is defined
+      - blast_root_uses_lvm is boolean
       - blast_crypt_mapper_name is defined
       - blast_crypt_mapper_name is string
-    fail_msg: "Invalid bootloader variables. Use the ./install wrapper to select root disk/partition."
+    fail_msg: "Invalid bootloader variables. Use the ./install wrapper to detect the root storage layout."
 - name: Check UEFI firmware path
   ansible.builtin.stat:
     path: /sys/firmware/efi
@@ -93,7 +95,7 @@
   ansible.builtin.set_fact:
     blast_mkinitcpio_text: "{{ blast_mkinitcpio_conf_content.content | b64decode }}"
     blast_is_encrypted_root: "{{ blast_partition_type == 'crypto_LUKS' and blast_root_device_uuid != blast_partition_uuid }}"
-    blast_is_lvm_root: "{{ blast_root_device_type == 'lvm' }}"
+    blast_is_lvm_root: "{{ blast_root_uses_lvm }}"
 - name: Validate encrypted root mapper
   ansible.builtin.assert:
     that:
@@ -108,5 +110,5 @@
 - name: Validate mkinitcpio lvm2 hook
   ansible.builtin.assert:
     that:
-      - not (blast_is_encrypted_root and blast_is_lvm_root) or blast_mkinitcpio_text is regex('(?m)^HOOKS=.*lvm2.*')
+      - not blast_is_lvm_root or blast_mkinitcpio_text is regex('(?m)^HOOKS=.*lvm2.*')
     fail_msg: "The 'lvm2' hook is missing in {{ blast_mkinitcpio_conf }}. Please add it to HOOKS."

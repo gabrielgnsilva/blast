@@ -55,7 +55,7 @@ check_dependencies() {
   local missing=()
   local dependency
 
-  for dependency in ansible-galaxy ansible-playbook blkid findmnt lsblk openssl whiptail; do
+  for dependency in ansible-galaxy ansible-playbook findmnt lsblk openssl whiptail; do
     if ! command -v "${dependency}" > /dev/null 2>&1; then
       missing+=("${dependency}")
     fi
@@ -65,49 +65,6 @@ check_dependencies() {
     printf 'Missing required dependencies: %s\n' "${missing[*]}" >&2
     exit 127
   fi
-}
-
-get_uuid() {
-  local device="${1}"
-  local uuid
-
-  uuid="$(blkid -s UUID -o value "${device}" 2> /dev/null || true)"
-  if [[ -z "${uuid}" ]]; then
-    uuid="$(lsblk -dno UUID "${device}" 2> /dev/null | tr -d '[:space:]' || true)"
-  fi
-
-  [[ -n "${uuid}" ]] || abort_installation "Could not determine UUID for ${device}."
-  printf '%s' "${uuid}"
-}
-
-detect_filesystem_type() {
-  local device="${1}"
-  local type
-
-  type="$(blkid -s TYPE -o value "${device}" 2> /dev/null || true)"
-  if [[ -z "${type}" ]]; then
-    type="$(lsblk -dno FSTYPE "${device}" 2> /dev/null | tr -d '[:space:]' || true)"
-  fi
-
-  printf '%s' "${type}"
-}
-
-get_filesystem_type() {
-  local device="${1}"
-  local type
-
-  type="$(detect_filesystem_type "${device}")"
-  [[ -n "${type}" ]] || abort_installation "Could not determine filesystem/type for ${device}."
-  printf '%s' "${type}"
-}
-
-get_device_type() {
-  local device="${1}"
-  local type
-
-  type="$(lsblk -dno TYPE "${device}" 2> /dev/null | tr -d '[:space:]' || true)"
-  [[ -n "${type}" ]] || abort_installation "Could not determine device type for ${device}."
-  printf '%s' "${type}"
 }
 
 get_current_timezone() {
@@ -171,94 +128,133 @@ get_current_user_name() {
 }
 
 obtain_bootloader() {
-  local disks=()
-  local disk_menu=()
-  local selected_disk
-  local parts=()
-  local parts_menu=()
-  local selected_part
   local root_device
-  local disk part type
+  local chain_output
+  local device type filesystem uuid
+  local root_row=true
+  local storage_summary
+  local chain_line
+  local root_partition=""
+  local root_disk=""
+  local partition_uuid=""
+  local partition_type=""
+  local luks_uuid=""
+  local luks_type=""
+  local mapper_name=""
+  local root_device_type=""
+  local root_device_uuid=""
+  local root_device_filesystem=""
+  local root_uses_lvm=false
+  local crypt_count=0
+  local luks_count=0
+  local chain=()
+  local -A parent_partitions=()
+  local -A physical_disks=()
 
   msg_box --title "Bootloader" \
     --msgbox "BLAST supports systemd-boot only. GRUB is intentionally not supported." 8 70 || cancel_installation
 
-  mapfile -t disks < <(lsblk -dpno NAME,TYPE | awk '$2 == "disk" { print $1 }')
-  [[ "${#disks[@]}" -gt 0 ]] || abort_installation "No disks found on the system."
-
-  for disk in "${disks[@]}"; do
-    disk_menu+=("${disk}" "")
-  done
-
-  if [[ "${#disks[@]}" -eq 1 ]]; then
-    selected_disk="${disks[0]}"
-  else
-    selected_disk=$(msg_box --title "Select root disk" \
-      --menu "Choose the disk where the partition allocated to root (/) is located:" 15 70 6 \
-      "${disk_menu[@]}") || cancel_installation
-  fi
-
-  mapfile -t parts < <(lsblk -lnpo NAME,TYPE "${selected_disk}" | awk '$2 == "part" { print $1 }')
-  [[ "${#parts[@]}" -gt 0 ]] || abort_installation "No partition found on ${selected_disk}."
-
-  for part in "${parts[@]}"; do
-    type="$(detect_filesystem_type "${part}")"
-    parts_menu+=("${part}" "${type:-unknown}")
-  done
-
-  if [[ "${#parts[@]}" -eq 1 ]]; then
-    selected_part="${parts[0]}"
-  else
-    selected_part=$(msg_box --title "Select root partition" \
-      --menu "Choose the partition allocated to root (/):" 15 80 6 \
-      "${parts_menu[@]}") || cancel_installation
-  fi
-
-  root_device="$(findmnt -n -o SOURCE /)"
+  root_device="$(findmnt -n --nofsroot -o SOURCE --target /)"
   [[ -n "${root_device}" ]] || abort_installation "Could not determine root device."
 
-  blast_partition_uuid="$(get_uuid "${selected_part}")"
-  blast_partition_type="$(get_filesystem_type "${selected_part}")"
-  blast_root_device_uuid="$(get_uuid "${root_device}")"
-  blast_root_device_type="$(get_device_type "${root_device}")"
+  chain_output="$(lsblk -s -r -p -n -o NAME,TYPE,FSTYPE,UUID "${root_device}" 2> /dev/null || true)"
+  [[ -n "${chain_output}" ]] || abort_installation "Could not inspect the root device chain for ${root_device}."
 
-  blast_crypt_mapper_name=""
-  if [[ "${blast_partition_type}" == "crypto_LUKS" && "${blast_root_device_uuid}" != "${blast_partition_uuid}" ]]; then
-    obtain_crypto_mapper_name
+  while read -r device type filesystem uuid; do
+    [[ -n "${device}" ]] || continue
+    chain+=("${device}|${type}|${filesystem:-unknown}|${uuid:-unknown}")
+
+    if [[ "${root_row}" == true ]]; then
+      root_device_type="${type}"
+      root_device_uuid="${uuid}"
+      root_device_filesystem="${filesystem}"
+      root_row=false
+    fi
+
+    if [[ "${type}" == "lvm" ]]; then
+      root_uses_lvm=true
+    fi
+
+    if [[ "${type}" == "crypt" && -z "${mapper_name}" ]]; then
+      mapper_name="$(basename "${device}")"
+    fi
+
+    if [[ "${type}" == "crypt" ]]; then
+      crypt_count=$((crypt_count + 1))
+    fi
+
+    if [[ "${filesystem}" == "crypto_LUKS" && -z "${luks_uuid}" ]]; then
+      luks_uuid="${uuid}"
+      luks_type="${filesystem}"
+    fi
+
+    if [[ "${filesystem}" == "crypto_LUKS" ]]; then
+      luks_count=$((luks_count + 1))
+    fi
+
+    if [[ "${type}" == "part" && -z "${root_partition}" ]]; then
+      root_partition="${device}"
+      partition_uuid="${uuid}"
+      partition_type="${filesystem}"
+    fi
+
+    if [[ "${type}" == "part" ]]; then
+      parent_partitions["${device}"]=1
+    fi
+
+    if [[ "${type}" == "disk" && -z "${root_disk}" ]]; then
+      root_disk="${device}"
+    fi
+
+    if [[ "${type}" == "disk" ]]; then
+      physical_disks["${device}"]=1
+    fi
+  done <<< "${chain_output}"
+
+  [[ -n "${root_device_uuid}" ]] || abort_installation "Could not determine the root filesystem UUID for ${root_device}."
+  [[ -n "${root_device_type}" ]] || abort_installation "Could not determine the root device type for ${root_device}."
+  [[ "${#parent_partitions[@]}" -eq 1 ]] || abort_installation "Unsupported root storage layout: expected exactly one parent partition."
+  [[ "${#physical_disks[@]}" -eq 1 ]] || abort_installation "Unsupported root storage layout: expected exactly one physical disk."
+  [[ "${crypt_count}" -le 1 ]] || abort_installation "Unsupported root storage layout: multiple encrypted mappings detected."
+  [[ "${luks_count}" -le 1 ]] || abort_installation "Unsupported root storage layout: multiple LUKS containers detected."
+  [[ "${crypt_count}" -eq "${luks_count}" ]] || abort_installation "Unsupported encrypted root storage layout: encrypted mappings must use LUKS."
+
+  if [[ -n "${luks_uuid}" ]]; then
+    blast_partition_uuid="${luks_uuid}"
+    blast_partition_type="${luks_type}"
+  else
+    blast_partition_uuid="${partition_uuid:-${root_device_uuid}}"
+    blast_partition_type="${partition_type:-${root_device_filesystem}}"
   fi
-}
+  blast_root_device_uuid="${root_device_uuid}"
+  blast_root_device_type="${root_device_type}"
+  blast_crypt_mapper_name="${mapper_name}"
+  blast_root_uses_lvm="${root_uses_lvm}"
 
-obtain_crypto_mapper_name() {
-  local mapper_paths=()
-  local mapper_names=()
-  local mapper_menu=()
-  local path name
-
-  shopt -s nullglob
-  mapper_paths=(/dev/mapper/*)
-  shopt -u nullglob
-
-  for path in "${mapper_paths[@]}"; do
-    [[ -e "${path}" ]] || continue
-    name="$(basename "${path}")"
-    [[ "${name}" == "control" ]] && continue
-    mapper_names+=("${name}")
-  done
-
-  [[ "${#mapper_names[@]}" -gt 0 ]] || abort_installation "No device mapper entries found in /dev/mapper."
-
-  if [[ "${#mapper_names[@]}" -eq 1 ]]; then
-    blast_crypt_mapper_name="${mapper_names[0]}"
-    return
+  storage_summary="Detected root storage layout:\n\n"
+  storage_summary+="Mount point:       /\n"
+  storage_summary+="Root device:       ${root_device}\n"
+  storage_summary+="Root filesystem:   ${root_device_filesystem:-unknown}\n"
+  storage_summary+="Filesystem UUID:   ${blast_root_device_uuid}\n"
+  if [[ -n "${luks_uuid}" ]]; then
+    storage_summary+="LUKS mapper:       ${blast_crypt_mapper_name}\n"
+    storage_summary+="LUKS UUID:         ${blast_partition_uuid}\n"
+  else
+    storage_summary+="LUKS mapper:       none\n"
+    storage_summary+="LUKS UUID:         none\n"
   fi
-
-  for name in "${mapper_names[@]}"; do
-    mapper_menu+=("${name}" "")
+  storage_summary+="Parent partition:  ${root_partition}\n"
+  storage_summary+="Physical disk:     ${root_disk}\n\n"
+  storage_summary+="Device chain:\n"
+  for chain_line in "${chain[@]}"; do
+    storage_summary+="  ${chain_line//|/  }\n"
   done
+  storage_summary+="\nContinue with this detected layout?"
 
-  blast_crypt_mapper_name=$(msg_box --title "Select encrypted mapper" \
-    --menu "Choose the mapper name used when unlocking the encrypted root partition:" 15 80 6 \
-    "${mapper_menu[@]}") || cancel_installation
+  msg_box --title "Confirm root storage" \
+    --yes-button "Continue" \
+    --no-button "Cancel" \
+    --yesno "${storage_summary}" 22 100 || cancel_installation
 }
 
 welcome() {
@@ -448,6 +444,7 @@ write_vars_file() {
     printf 'blast_root_device_type: '
     yaml_quote "${blast_root_device_type}"
     printf '\n'
+    printf 'blast_root_uses_lvm: %s\n' "${blast_root_uses_lvm}"
     printf 'blast_crypt_mapper_name: '
     yaml_quote "${blast_crypt_mapper_name}"
     printf '\n'
