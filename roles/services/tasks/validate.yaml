@@ -18,12 +18,12 @@
   loop_control:
     loop_var: timer_name
     label: "{{ timer_name }}"
-- name: Validate package-backed service names
+- name: Validate package-backed unit names
   ansible.builtin.assert:
     that:
       - service_name is string
-      - service_name is match('^[A-Za-z0-9_.@:-]+\.service$')
-    fail_msg: "Invalid package-backed systemd service name: {{ service_name }}"
+      - service_name is match('^[A-Za-z0-9_.@:-]+\.(service|socket)$')
+    fail_msg: "Invalid package-backed systemd unit name: {{ service_name }}"
   loop: "{{ blast_package_services.values() | flatten }}"
   loop_control:
     loop_var: service_name
