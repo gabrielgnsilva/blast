@@ -5,6 +5,15 @@
     cmd: pacman -Qq
   register: blast_installed_packages
   changed_when: false
+- name: Configure Docker for localhost-only published ports
+  ansible.builtin.template:
+    src: daemon.json.j2
+    dest: /etc/docker/daemon.json
+    owner: root
+    group: root
+    mode: "0644"
+  when: "'docker' in blast_installed_packages.stdout_lines"
+  notify: Restart Docker daemon
 - name: Disable fwupd peer-to-peer metadata sharing
   community.general.ini_file:
     path: /etc/fwupd/fwupd.conf
@@ -65,6 +74,7 @@
   ansible.builtin.systemd_service:
     name: "{{ service_name }}"
     enabled: true
+    state: started
   loop: "{{ blast_enabled_package_services | default([]) | unique | sort }}"
   loop_control:
     loop_var: service_name
