@@ -270,7 +270,7 @@ confirm_install() {
   msg_box --title "Bootloader changes" \
     --yes-button "I understand" \
     --no-button "Return..." \
-    --yesno "BLAST will install systemd-boot with \"bootctl install\", write loader entries under /boot/loader, regenerate initramfs with \"mkinitcpio -P\", and enable systemd-boot-update.service.\\n\\nOnly continue if /boot is mounted as your EFI system partition and you accept these bootloader changes." 13 90 || cancel_installation
+    --yesno "BLAST will install systemd-boot with \"bootctl install\", write loader entries under /boot/loader, and regenerate initramfs with \"mkinitcpio -P\".\\n\\nOnly continue if /boot is mounted as your EFI system partition and you accept these bootloader changes." 13 90 || cancel_installation
 
   msg_box --title "Let's get this party started!" \
     --yes-button "Let's go!" \
