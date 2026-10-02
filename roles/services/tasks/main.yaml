@@ -5,6 +5,14 @@
     cmd: pacman -Qq
   register: blast_installed_packages
   changed_when: false
+- name: Ensure Docker configuration directory exists
+  ansible.builtin.file:
+    path: /etc/docker
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  when: "'docker' in blast_installed_packages.stdout_lines"
 - name: Configure Docker for localhost-only published ports
   ansible.builtin.template:
     src: daemon.json.j2
