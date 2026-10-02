@@ -5,6 +5,43 @@
     cmd: pacman -Qq
   register: blast_installed_packages
   changed_when: false
+
+- name: Ensure user systemd directory exists for llama.cpp
+  ansible.builtin.file:
+    path: "{{ blast_user_home }}/.config/systemd/user"
+    state: directory
+    owner: "{{ blast_username }}"
+    group: "{{ blast_user_group }}"
+    mode: "0755"
+  when: "'llama-cpp' in blast_installed_packages.stdout_lines"
+
+- name: Install llama.cpp router user service
+  ansible.builtin.copy:
+    src: llama-router.service
+    dest: "{{ blast_user_home }}/.config/systemd/user/llama-router.service"
+    owner: "{{ blast_username }}"
+    group: "{{ blast_user_group }}"
+    mode: "0644"
+  when: "'llama-cpp' in blast_installed_packages.stdout_lines"
+
+- name: Ensure llama.cpp user service target directory exists
+  ansible.builtin.file:
+    path: "{{ blast_user_home }}/.config/systemd/user/default.target.wants"
+    state: directory
+    owner: "{{ blast_username }}"
+    group: "{{ blast_user_group }}"
+    mode: "0755"
+  when: "'llama-cpp' in blast_installed_packages.stdout_lines"
+
+- name: Enable llama.cpp router user service
+  ansible.builtin.file:
+    src: ../llama-router.service
+    dest: "{{ blast_user_home }}/.config/systemd/user/default.target.wants/llama-router.service"
+    state: link
+    owner: "{{ blast_username }}"
+    group: "{{ blast_user_group }}"
+  when: "'llama-cpp' in blast_installed_packages.stdout_lines"
+
 - name: Ensure Docker configuration directory exists
   ansible.builtin.file:
     path: /etc/docker

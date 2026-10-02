@@ -4,6 +4,9 @@
 - name: Run ROCm health checks
   ansible.builtin.import_tasks: rocm.yml
 
+- name: Run local AI health checks
+  ansible.builtin.import_tasks: local_ai.yml
+
 - name: Run service health checks
   ansible.builtin.import_tasks: services.yml
 

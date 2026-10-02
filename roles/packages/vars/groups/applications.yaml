@@ -50,3 +50,8 @@ applications:
       - lib32-mangohud
       - gamemode
       - lib32-gamemode
+  - name: local_ai_runtime
+    purpose: Provide the llama.cpp local AI runtime
+    packages:
+      - llama-cpp
+      - ggml-hip

@@ -1,0 +1,24 @@
+- name: Check whether llama.cpp is installed
+  ansible.builtin.command:
+    cmd: test -x /usr/bin/llama-server
+  register: blast_llama_installed
+  changed_when: false
+  failed_when: false
+
+- name: Check llama.cpp ROCm devices
+  ansible.builtin.command:
+    cmd: llama-server --list-devices
+  register: blast_llama_devices
+  changed_when: false
+  when:
+    - blast_llama_installed.rc == 0
+    - "'amd' in blast_gpu_vendors"
+
+- name: Verify llama.cpp ROCm device
+  ansible.builtin.assert:
+    that:
+      - "'ROCm0:' in blast_llama_devices.stdout"
+    fail_msg: "llama.cpp is installed but no ROCm device was detected."
+  when:
+    - blast_llama_installed.rc == 0
+    - "'amd' in blast_gpu_vendors"

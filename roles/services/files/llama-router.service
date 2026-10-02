@@ -1,0 +1,21 @@
+[Unit]
+Description=llama.cpp local model router
+After=default.target
+ConditionPathExists=%h/.config/llama.cpp/models.ini
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/llama-server \
+    --models-preset %h/.config/llama.cpp/models.ini \
+    --models-max 1 \
+    --models-autoload \
+    --host 127.0.0.1 \
+    --port 8080 \
+    --cors-origins localhost \
+    --no-ui \
+    --offline
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=default.target
