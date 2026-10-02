@@ -63,7 +63,7 @@
     NVM_DIR: "{{ blast_user_home }}/.local/share/nvm"
     HOME: "{{ blast_user_home }}"
   changed_when: false
-  failed_when: false
+  failed_when: blast_nvm_lts.rc not in [0, 3]
   register: blast_nvm_lts
   when: blast_nvm_init.stat.exists
 - name: Install Node.js LTS with NVM
@@ -73,11 +73,11 @@
     cmd: |
       source /usr/share/nvm/init-nvm.sh
       nvm install --lts
+      nvm alias default 'lts/*'
     executable: /bin/bash
   environment:
     NVM_DIR: "{{ blast_user_home }}/.local/share/nvm"
     HOME: "{{ blast_user_home }}"
   when:
     - blast_nvm_init.stat.exists
-    - (blast_nvm_lts.rc | default(1)) == 0
-    - (blast_nvm_lts.stdout | default('') | trim) in ['N/A', 'system']
+    - (blast_nvm_lts.rc | default(1)) == 3
