@@ -3,3 +3,12 @@
 
 - name: Run ROCm health checks
   ansible.builtin.import_tasks: rocm.yml
+
+- name: Run service health checks
+  ansible.builtin.import_tasks: services.yml
+
+- name: Run systemd health checks
+  ansible.builtin.import_tasks: systemd.yml
+
+- name: Run bootloader health checks
+  ansible.builtin.import_tasks: bootloader.yml

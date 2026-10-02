@@ -1,0 +1,4 @@
+- name: Check systemd-boot status
+  ansible.builtin.command:
+    cmd: bootctl status --no-pager
+  changed_when: false

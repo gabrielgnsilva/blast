@@ -1,0 +1,75 @@
+- name: Check whether Docker is installed
+  ansible.builtin.command:
+    cmd: pacman -Qq docker
+  register: blast_health_docker_package
+  changed_when: false
+  failed_when: false
+- name: Check Docker daemon
+  ansible.builtin.command:
+    cmd: systemctl is-active --quiet docker.service
+  changed_when: false
+  when: blast_health_docker_package.rc == 0
+
+- name: Check whether libvirt is installed
+  ansible.builtin.command:
+    cmd: pacman -Qq libvirt
+  register: blast_health_libvirt_package
+  changed_when: false
+  failed_when: false
+- name: Check libvirt daemon
+  ansible.builtin.command:
+    cmd: systemctl is-active --quiet libvirtd.service
+  changed_when: false
+  when: blast_health_libvirt_package.rc == 0
+
+- name: Check whether PipeWire is installed
+  ansible.builtin.command:
+    cmd: pacman -Qq pipewire wireplumber pipewire-pulse
+  register: blast_health_pipewire_packages
+  changed_when: false
+  failed_when: false
+- name: Check PipeWire
+  ansible.builtin.command:
+    cmd: pipewire --version
+  changed_when: false
+  when: blast_health_pipewire_packages.rc == 0
+- name: Check WirePlumber
+  ansible.builtin.command:
+    cmd: wireplumber --version
+  changed_when: false
+  when: blast_health_pipewire_packages.rc == 0
+
+- name: Check whether pacman-contrib is installed
+  ansible.builtin.command:
+    cmd: pacman -Qq pacman-contrib
+  register: blast_health_paccache_package
+  changed_when: false
+  failed_when: false
+- name: Check paccache timer
+  ansible.builtin.command:
+    cmd: systemctl is-active --quiet paccache.timer
+  changed_when: false
+  when: blast_health_paccache_package.rc == 0
+
+- name: Check whether UFW is installed
+  ansible.builtin.command:
+    cmd: pacman -Qq ufw
+  register: blast_health_ufw_package
+  changed_when: false
+  failed_when: false
+- name: Check UFW status
+  ansible.builtin.command:
+    cmd: ufw status
+  register: blast_health_ufw_status
+  changed_when: false
+  when:
+    - blast_ufw_enabled | bool
+    - blast_health_ufw_package.rc == 0
+- name: Validate UFW is active
+  ansible.builtin.assert:
+    that:
+      - blast_health_ufw_status.stdout is regex('(?m)^Status:\s+active$')
+    fail_msg: "UFW is installed but not active."
+  when:
+    - blast_ufw_enabled | bool
+    - blast_health_ufw_package.rc == 0

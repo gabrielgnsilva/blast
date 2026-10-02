@@ -1,0 +1,12 @@
+- name: Check for failed systemd units
+  ansible.builtin.command:
+    cmd: systemctl --failed --no-legend --plain
+  register: blast_health_failed_units
+  changed_when: false
+  failed_when: false
+- name: Validate there are no failed systemd units
+  ansible.builtin.assert:
+    that:
+      - blast_health_failed_units.rc == 0
+      - blast_health_failed_units.stdout | trim == ''
+    fail_msg: "Failed systemd units detected: {{ blast_health_failed_units.stdout | trim }}"
