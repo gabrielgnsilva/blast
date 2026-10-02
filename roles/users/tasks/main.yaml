@@ -81,3 +81,32 @@
   when:
     - blast_nvm_init.stat.exists
     - (blast_nvm_lts.rc | default(1)) == 3
+- name: Check target user's pnpm installation
+  become: true
+  become_user: "{{ blast_username }}"
+  ansible.builtin.shell:
+    cmd: |
+      source /usr/share/nvm/init-nvm.sh
+      nvm exec --silent 'lts/*' pnpm --version
+    executable: /bin/bash
+  environment:
+    NVM_DIR: "{{ blast_user_home }}/.local/share/nvm"
+    HOME: "{{ blast_user_home }}"
+  changed_when: false
+  failed_when: false
+  register: blast_pnpm
+  when: blast_nvm_init.stat.exists
+- name: Install pnpm in the NVM Node.js environment
+  become: true
+  become_user: "{{ blast_username }}"
+  ansible.builtin.shell:
+    cmd: |
+      source /usr/share/nvm/init-nvm.sh
+      nvm exec --silent 'lts/*' npm install --global pnpm
+    executable: /bin/bash
+  environment:
+    NVM_DIR: "{{ blast_user_home }}/.local/share/nvm"
+    HOME: "{{ blast_user_home }}"
+  when:
+    - blast_nvm_init.stat.exists
+    - (blast_pnpm.rc | default(1)) != 0

@@ -60,10 +60,9 @@ development:
       - gradle
       - ant
   - name: javascript_language
-    purpose: Provide JavaScript runtime and package management tools
+    purpose: Provide JavaScript runtime management
     packages:
       - nvm
-      - pnpm
   - name: lua_language
     purpose: Provide Lua programming environment
     packages:
