@@ -2,14 +2,24 @@
   ansible.builtin.command:
     cmd: pacman -Qq gnome-keyring
   changed_when: false
-- name: Install package-managed PAM files
-  ansible.builtin.copy:
-    src: pam/system/
-    dest: /
-    owner: root
-    group: root
-    mode: preserve
-    directory_mode: preserve
+  failed_when: false
+  register: blast_gnome_keyring_package
+- name: Add gnome-keyring authentication to PAM login
+  ansible.builtin.lineinfile:
+    path: /etc/pam.d/login
+    regexp: '^auth\s+optional\s+pam_gnome_keyring\.so$'
+    line: 'auth     optional  pam_gnome_keyring.so'
+    insertafter: '^auth\s+include\s+system-local-login$'
+    create: false
+  when: blast_gnome_keyring_package.rc == 0
+- name: Add gnome-keyring session to PAM login
+  ansible.builtin.lineinfile:
+    path: /etc/pam.d/login
+    regexp: '^session\s+optional\s+pam_gnome_keyring\.so\s+auto_start$'
+    line: 'session  optional  pam_gnome_keyring.so auto_start'
+    insertafter: '^session\s+include\s+system-local-login$'
+    create: false
+  when: blast_gnome_keyring_package.rc == 0
 - name: Check Steam packages for managed Steam system files
   ansible.builtin.command:
     cmd: "pacman -Qq {{ package_name }}"
