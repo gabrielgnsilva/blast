@@ -39,3 +39,45 @@
     - blast_rustup_binary.stat.exists
     - (blast_rustup_toolchains.rc | default(1)) == 0
     - (blast_rustup_toolchains.stdout | default('')) is not regex('(?m)^stable[^ ]* \(default\)$')
+- name: Check NVM installation
+  ansible.builtin.stat:
+    path: /usr/share/nvm/init-nvm.sh
+  register: blast_nvm_init
+- name: Ensure target user's NVM directory exists
+  ansible.builtin.file:
+    path: "{{ blast_user_home }}/.local/share/nvm"
+    state: directory
+    owner: "{{ blast_username }}"
+    group: "{{ blast_user_group }}"
+    mode: "0755"
+  when: blast_nvm_init.stat.exists
+- name: Check target user's Node.js LTS installation
+  become: true
+  become_user: "{{ blast_username }}"
+  ansible.builtin.shell:
+    cmd: |
+      source /usr/share/nvm/init-nvm.sh
+      nvm version 'lts/*'
+    executable: /bin/bash
+  environment:
+    NVM_DIR: "{{ blast_user_home }}/.local/share/nvm"
+    HOME: "{{ blast_user_home }}"
+  changed_when: false
+  failed_when: false
+  register: blast_nvm_lts
+  when: blast_nvm_init.stat.exists
+- name: Install Node.js LTS with NVM
+  become: true
+  become_user: "{{ blast_username }}"
+  ansible.builtin.shell:
+    cmd: |
+      source /usr/share/nvm/init-nvm.sh
+      nvm install --lts
+    executable: /bin/bash
+  environment:
+    NVM_DIR: "{{ blast_user_home }}/.local/share/nvm"
+    HOME: "{{ blast_user_home }}"
+  when:
+    - blast_nvm_init.stat.exists
+    - (blast_nvm_lts.rc | default(1)) == 0
+    - (blast_nvm_lts.stdout | default('') | trim) in ['N/A', 'system']
