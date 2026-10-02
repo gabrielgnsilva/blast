@@ -38,7 +38,7 @@
   when:
     - blast_rustup_binary.stat.exists
     - (blast_rustup_toolchains.rc | default(1)) == 0
-    - (blast_rustup_toolchains.stdout | default('')) is not regex('(?m)^stable[^ ]* \(default\)$')
+    - (blast_rustup_toolchains.stdout | default('')) is not regex('(?m)^stable[^ ]* \([^)]*default[^)]*\)$')
 - name: Check NVM installation
   ansible.builtin.stat:
     path: /usr/share/nvm/init-nvm.sh
