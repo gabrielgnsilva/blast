@@ -7,7 +7,7 @@
 
 - name: Check ROCm capability
   ansible.builtin.command:
-    cmd: rocminfo
+    cmd: /opt/rocm/bin/rocminfo
   changed_when: false
   when: blast_rocm_package.rc == 0
 
