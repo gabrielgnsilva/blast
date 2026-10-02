@@ -73,7 +73,6 @@
     cmd: |
       source /usr/share/nvm/init-nvm.sh
       nvm install --lts
-      nvm alias default 'lts/*'
     executable: /bin/bash
   environment:
     NVM_DIR: "{{ blast_user_home }}/.local/share/nvm"
@@ -81,6 +80,31 @@
   when:
     - blast_nvm_init.stat.exists
     - (blast_nvm_lts.rc | default(1)) == 3
+- name: Check target user's NVM default alias
+  become: true
+  become_user: "{{ blast_username }}"
+  ansible.builtin.command:
+    cmd: cat "{{ blast_user_home }}/.local/share/nvm/alias/default"
+  changed_when: false
+  failed_when: false
+  register: blast_nvm_default
+  when: blast_nvm_init.stat.exists
+- name: Set Node.js LTS as NVM default
+  become: true
+  become_user: "{{ blast_username }}"
+  ansible.builtin.shell:
+    cmd: |
+      source /usr/share/nvm/init-nvm.sh
+      nvm alias default 'lts/*'
+    executable: /bin/bash
+  environment:
+    NVM_DIR: "{{ blast_user_home }}/.local/share/nvm"
+    HOME: "{{ blast_user_home }}"
+  when:
+    - blast_nvm_init.stat.exists
+    - >-
+      (blast_nvm_default.rc | default(1)) != 0 or
+      (blast_nvm_default.stdout | default('') | trim) != 'lts/*'
 - name: Check target user's pnpm installation
   become: true
   become_user: "{{ blast_username }}"
