@@ -1,6 +1,9 @@
 - name: Check Vulkan capability
   ansible.builtin.command:
     cmd: vulkaninfo --summary
+  environment:
+    DISPLAY: ""
+    WAYLAND_DISPLAY: ""
   changed_when: false
   when: "'amd' in blast_gpu_vendors"
 
