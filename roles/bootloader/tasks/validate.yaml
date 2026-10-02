@@ -112,3 +112,8 @@
     that:
       - not blast_is_lvm_root or blast_mkinitcpio_text is regex('(?m)^HOOKS=.*lvm2.*')
     fail_msg: "The 'lvm2' hook is missing in {{ blast_mkinitcpio_conf }}. Please add it to HOOKS."
+- name: Validate mkinitcpio microcode hook
+  ansible.builtin.assert:
+    that:
+      - blast_mkinitcpio_text is regex('(?m)^HOOKS=.*microcode.*')
+    fail_msg: "The 'microcode' hook is missing in {{ blast_mkinitcpio_conf }}. Please add it to HOOKS."
