@@ -13,3 +13,29 @@
   ansible.builtin.import_tasks: package_groups.yaml
 - name: Set target user facts
   ansible.builtin.import_tasks: facts.yaml
+- name: Check rustup installation
+  ansible.builtin.stat:
+    path: /usr/bin/rustup
+  register: blast_rustup_binary
+- name: Check target user's Rust toolchains
+  become: true
+  become_user: "{{ blast_username }}"
+  ansible.builtin.command:
+    cmd: rustup toolchain list
+  environment:
+    HOME: "{{ blast_user_home }}"
+  changed_when: false
+  failed_when: false
+  register: blast_rustup_toolchains
+  when: blast_rustup_binary.stat.exists
+- name: Install default Rust stable toolchain
+  become: true
+  become_user: "{{ blast_username }}"
+  ansible.builtin.command:
+    cmd: rustup default stable
+  environment:
+    HOME: "{{ blast_user_home }}"
+  when:
+    - blast_rustup_binary.stat.exists
+    - (blast_rustup_toolchains.rc | default(1)) == 0
+    - (blast_rustup_toolchains.stdout | default('')) is not regex('(?m)^stable[^ ]* \(default\)$')
