@@ -1,3 +1,7 @@
+- name: Install MemTest86+ EFI package
+  community.general.pacman:
+    name: memtest86+-efi
+    state: present
 - name: Validate bootloader preconditions
   ansible.builtin.import_tasks: validate.yaml
 - name: Validate bootloader packages
@@ -43,6 +47,13 @@
     loop_var: boot_entry
     label: "{{ boot_entry.name }}"
   notify: Regenerate initramfs images
+- name: Configure MemTest86+ boot entry
+  ansible.builtin.template:
+    src: memtest.conf.j2
+    dest: "{{ blast_bootloader_entries_dir }}/memtest.conf"
+    owner: root
+    group: root
+    mode: "0644"
 - name: Enable fallback initramfs preset
   ansible.builtin.lineinfile:
     path: "{{ blast_mkinitcpio_linux_preset }}"
@@ -79,6 +90,7 @@
     - /boot/vmlinuz-linux
     - /boot/initramfs-linux.img
     - /boot/initramfs-linux-fallback.img
+    - /boot/memtest86+/memtest86x64.efi
   loop_control:
     loop_var: boot_file
   register: blast_rendered_boot_files
