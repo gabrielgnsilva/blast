@@ -32,6 +32,8 @@ applications:
       - vlc
       - vlc-plugin-ffmpeg
       - cava
+      - yt-dlp
+      - python-mutagen
   - name: remote_access_tools
     purpose: Provide remote access and SSH tools
     packages:
