@@ -87,6 +87,7 @@ desktop:
       - gnome-keyring
       - libsecret
       - seahorse
+      - kleopatra
   - name: terminal
     purpose: Provide terminal emulation and shell enhancements
     packages:

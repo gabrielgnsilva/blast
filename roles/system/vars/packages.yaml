@@ -23,6 +23,7 @@ blast_system_package_groups:
   - name: package_management
     purpose: Provide Pacman maintenance and package management utilities
     packages:
+      - gnupg
       - reflector
       - pacman-contrib
       - pacutils
