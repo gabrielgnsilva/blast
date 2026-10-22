@@ -38,6 +38,10 @@ blast_system_package_groups:
       - zip
       - unzip
       - unrar
+  - name: file_synchronization
+    purpose: Provide file synchronization utilities
+    packages:
+      - rsync
   - name: firmware
     purpose: Provide firmware management utilities
     packages:

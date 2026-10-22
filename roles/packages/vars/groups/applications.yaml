@@ -37,6 +37,7 @@ applications:
     packages:
       - openssh
       - remmina
+      - freerdp
   - name: torrent_client
     purpose: Provide torrent client
     packages:
