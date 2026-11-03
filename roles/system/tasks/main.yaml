@@ -6,6 +6,8 @@
   ansible.builtin.import_tasks: packages.yaml
 - name: Configure timezone
   ansible.builtin.import_tasks: timezone.yaml
+- name: Configure NTP synchronization
+  ansible.builtin.import_tasks: ntp.yaml
 - name: Configure hostname
   ansible.builtin.import_tasks: hostname.yaml
 - name: Configure locale
