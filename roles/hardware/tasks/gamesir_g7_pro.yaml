@@ -1,0 +1,92 @@
+- name: Validate GameSir G7 Pro patch settings
+  ansible.builtin.assert:
+    that:
+      - blast_gamesir_g7_pro_release | length > 0
+      - blast_gamesir_g7_pro_asset is match('^[A-Za-z0-9._-]+$')
+      - blast_gamesir_g7_pro_sha256 is match('^[0-9a-fA-F]{64}$')
+    fail_msg: >-
+      GameSir G7 Pro HID-BPF settings are invalid. Configure a release, a safe
+      asset filename, and a 64-character SHA-256 checksum.
+  when: blast_gamesir_g7_pro_enabled | bool
+
+- name: Install udev-hid-bpf runtime
+  community.general.pacman:
+    name: udev-hid-bpf
+    state: present
+  when: blast_gamesir_g7_pro_enabled | bool
+
+- name: Define GameSir G7 Pro patch paths
+  ansible.builtin.set_fact:
+    blast_gamesir_g7_pro_download_url: >-
+      https://github.com/gabrielgnsilva/gamesir-g7-pro-linux-hid-bpf/releases/download/{{ blast_gamesir_g7_pro_release }}/{{ blast_gamesir_g7_pro_asset }}
+    blast_gamesir_g7_pro_download_path: "/var/cache/blast/{{ blast_gamesir_g7_pro_asset }}"
+    blast_gamesir_g7_pro_installed_path: "/etc/udev-hid-bpf/{{ blast_gamesir_g7_pro_asset }}"
+    blast_gamesir_g7_pro_rule_path: >-
+      /etc/udev/rules.d/99-hid-bpf-{{ blast_gamesir_g7_pro_asset | regex_replace('\.bpf\.o$', '') }}.rules
+  when: blast_gamesir_g7_pro_enabled | bool
+
+- name: Check installed GameSir G7 Pro BPF object
+  ansible.builtin.stat:
+    path: "{{ blast_gamesir_g7_pro_installed_path }}"
+    checksum_algorithm: sha256
+  register: blast_gamesir_g7_pro_installed_object
+  when: blast_gamesir_g7_pro_enabled | bool
+
+- name: Check installed GameSir G7 Pro udev rule
+  ansible.builtin.stat:
+    path: "{{ blast_gamesir_g7_pro_rule_path }}"
+  register: blast_gamesir_g7_pro_installed_rule
+  when: blast_gamesir_g7_pro_enabled | bool
+
+- name: Create BLAST download cache directory
+  ansible.builtin.file:
+    path: /var/cache/blast
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  when:
+    - blast_gamesir_g7_pro_enabled | bool
+    - >-
+      not blast_gamesir_g7_pro_installed_object.stat.exists
+      or blast_gamesir_g7_pro_installed_object.stat.checksum | default('') != blast_gamesir_g7_pro_sha256
+      or not blast_gamesir_g7_pro_installed_rule.stat.exists
+
+- name: Cache GameSir G7 Pro BPF object
+  ansible.builtin.get_url:
+    url: "{{ blast_gamesir_g7_pro_download_url }}"
+    dest: "{{ blast_gamesir_g7_pro_download_path }}"
+    checksum: "sha256:{{ blast_gamesir_g7_pro_sha256 }}"
+    owner: root
+    group: root
+    mode: "0644"
+  when:
+    - blast_gamesir_g7_pro_enabled | bool
+    - >-
+      not blast_gamesir_g7_pro_installed_object.stat.exists
+      or blast_gamesir_g7_pro_installed_object.stat.checksum | default('') != blast_gamesir_g7_pro_sha256
+      or not blast_gamesir_g7_pro_installed_rule.stat.exists
+
+- name: Install GameSir G7 Pro HID-BPF object and udev rule
+  ansible.builtin.command:
+    argv:
+      - udev-hid-bpf
+      - install
+      - --force
+      - "{{ blast_gamesir_g7_pro_download_path }}"
+  register: blast_gamesir_g7_pro_install
+  changed_when: true
+  when:
+    - blast_gamesir_g7_pro_enabled | bool
+    - >-
+      not blast_gamesir_g7_pro_installed_object.stat.exists
+      or blast_gamesir_g7_pro_installed_object.stat.checksum | default('') != blast_gamesir_g7_pro_sha256
+      or not blast_gamesir_g7_pro_installed_rule.stat.exists
+
+- name: Reload udev rules after GameSir G7 Pro patch change
+  ansible.builtin.command:
+    cmd: udevadm control --reload-rules
+  changed_when: true
+  when:
+    - blast_gamesir_g7_pro_enabled | bool
+    - blast_gamesir_g7_pro_install is changed

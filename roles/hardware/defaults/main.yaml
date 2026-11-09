@@ -1,2 +1,8 @@
 blast_gpu_vendors:
   - amd
+
+# GameSir G7 Pro multimedia keys (HID-BPF)
+blast_gamesir_g7_pro_enabled: false
+blast_gamesir_g7_pro_release: "v1.0.0"
+blast_gamesir_g7_pro_asset: "gamesir-g7-pro-1022.bpf.o"
+blast_gamesir_g7_pro_sha256: "9260f47f6bc9d06c9f9de32bc0eff7cd733ab867350b30e078df947b09a1fcd8"

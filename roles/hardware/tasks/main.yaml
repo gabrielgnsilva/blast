@@ -1,5 +1,8 @@
 - name: Install hardware support packages
   ansible.builtin.import_tasks: packages.yaml
+- name: Install GameSir G7 Pro HID-BPF fix
+  ansible.builtin.import_tasks: gamesir_g7_pro.yaml
+  when: blast_gamesir_g7_pro_enabled | bool
 - name: Configure CPU
   ansible.builtin.import_tasks: cpu.yaml
 - name: Configure GPU
