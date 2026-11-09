@@ -354,6 +354,45 @@ obtain_optical_media() {
   fi
 }
 
+obtain_additional_installations() {
+  local selected_installations
+
+  blast_gamesir_g7_pro_enabled=false
+
+  msg_box --title "Additional installations" \
+    --msgbox "The following installations are optional.\n\nIf you do not know what an option does, leave it unchecked and continue. You can enable it later by editing the Ansible variables." 11 80 || cancel_installation
+
+  selected_installations=$(
+    msg_box --title "Additional installations" \
+      --checklist "Select optional integrations to install:" 15 90 5 \
+      "gamesir-g7-pro" "GameSir G7 Pro media keys (HID-BPF patch)" "off"
+  ) || cancel_installation
+
+  if [[ " ${selected_installations} " == *' "gamesir-g7-pro" '* ]]; then
+    blast_gamesir_g7_pro_enabled=true
+
+    if gamesir_g7_pro_dongle_connected; then
+      msg_box --title "Reconnect GameSir dongle" \
+        --msgbox "The GameSir G7 Pro 2.4 GHz dongle is currently connected.\n\nAfter BLAST finishes, physically disconnect the dongle and reconnect it. The HID-BPF fix is applied when the device is added by udev." 11 80 || cancel_installation
+    fi
+  fi
+}
+
+gamesir_g7_pro_dongle_connected() {
+  local usb_device vendor product
+
+  for usb_device in /sys/bus/usb/devices/*; do
+    [[ -f "${usb_device}/idVendor" && -f "${usb_device}/idProduct" ]] || continue
+    IFS= read -r vendor < "${usb_device}/idVendor"
+    IFS= read -r product < "${usb_device}/idProduct"
+    if [[ "${vendor}" == "3537" && "${product}" == "1022" ]]; then
+      return 0
+    fi
+  done
+
+  return 1
+}
+
 obtain_user_and_password() {
   local user_exists=false
 
@@ -458,6 +497,7 @@ write_vars_file() {
     printf '\n'
     printf 'blast_root_uses_lvm: %s\n' "${blast_root_uses_lvm}"
     printf 'blast_install_optical_media: %s\n' "${blast_install_optical_media}"
+    printf 'blast_gamesir_g7_pro_enabled: %s\n' "${blast_gamesir_g7_pro_enabled}"
     printf 'blast_crypt_mapper_name: '
     yaml_quote "${blast_crypt_mapper_name}"
     printf '\n'
@@ -483,6 +523,7 @@ main() {
   obtain_hostname
   obtain_gpu_vendors
   obtain_optical_media
+  obtain_additional_installations
   obtain_bootloader
   obtain_user_and_password
   confirm_install
